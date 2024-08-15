@@ -15,9 +15,8 @@ extend-select = [
     "C4",  # flake8-comprehensions
     "ERA", # flake8-eradicate/eradicate
     "I",   # isort
-    "N",   # pep8-naming
+    # "N",   # pep8-naming
     "PIE", # flake8-pie
-    "PGH", # pygrep
     "RUF", # ruff checks
     "SIM", # flake8-simplify
     "T20", # flake8-print
@@ -28,7 +27,7 @@ extend-select = [
 ignore = [
     "B904", # use 'raise ... from err'
     "B905", # use explicit 'strict=' parameter with 'zip()'
-    "N818", #  Exception name should be named with an Error suffix
+    "N818", # Exception name should be named with an Error suffix
 ]
 extend-safe-fixes = [
     "TCH", # move import from and to TYPE_CHECKING blocks
