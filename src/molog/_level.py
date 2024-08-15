@@ -1,10 +1,9 @@
 from ._base import _lock
 
 CRITICAL = 50
-FATAL = CRITICAL
 ERROR = 40
 WARNING = 30
-WARN = WARNING
+NOTICE = 25
 INFO = 20
 DEBUG = 10
 NOTSET = 0
@@ -13,23 +12,23 @@ _levelToName = {
     CRITICAL: 'CRITICAL',
     ERROR: 'ERROR',
     WARNING: 'WARNING',
+    NOTICE: 'NOTICE',
     INFO: 'INFO',
     DEBUG: 'DEBUG',
     NOTSET: 'NOTSET',
 }
 _nameToLevel = {
     'CRITICAL': CRITICAL,
-    'FATAL': FATAL,
     'ERROR': ERROR,
-    'WARN': WARNING,
     'WARNING': WARNING,
+    'NOTICE': NOTICE,
     'INFO': INFO,
     'DEBUG': DEBUG,
     'NOTSET': NOTSET,
 }
 
 
-def _checkLevel(level):
+def _checkLevel(level: int | str) -> int:
     if isinstance(level, int):
         rv = level
     elif str(level) == level:
@@ -45,7 +44,7 @@ def getLevelNamesMapping():
     return _nameToLevel.copy()
 
 
-def getLevelName(level):
+def getLevelName(level: int) -> str:
     """
     Return the textual or numeric representation of logging level 'level'.
 
@@ -61,19 +60,15 @@ def getLevelName(level):
     numeric value is returned.
 
     If no matching numeric or string value is passed in, the string
-    'Level %s' % level is returned.
+    ``f'Level {level}'`` is returned.
     """
-    # See Issues #22386, #27937 and #29220 for why it's this way
     result = _levelToName.get(level)
-    if result is not None:
-        return result
-    result = _nameToLevel.get(level)
     if result is not None:
         return result
     return f"Level {level}"
 
 
-def addLevelName(level, levelName):
+def addLevelName(level: int, levelName: str) -> None:
     """
     Associate 'levelName' with 'level'.
 
