@@ -1858,8 +1858,8 @@ class LoggerAdapter:
         Normally, you'll only need to override this one method in a
         LoggerAdapter subclass for your specific needs.
         """
-        assert self.extra is not None
         if self.merge_extra and "extra" in kwargs:
+            assert self.extra is not None
             kwargs["extra"] = {**self.extra, **kwargs["extra"]}
         else:
             kwargs["extra"] = self.extra

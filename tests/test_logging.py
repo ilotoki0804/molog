@@ -19,8 +19,8 @@
 Copyright (C) 2001-2022 Vinay Sajip. All Rights Reserved.
 """
 import molog.logging
-import molog.handlers
-import molog.config
+import logging.handlers
+import logging.config
 
 import codecs
 import configparser
@@ -612,7 +612,7 @@ class HandlerTest(BaseTest):
                 fn = make_temp_file()
                 if not existing:
                     os.unlink(fn)
-                h = molog.handlers.WatchedFileHandler(fn, encoding='utf-8', delay=True)
+                h = logging.handlers.WatchedFileHandler(fn, encoding='utf-8', delay=True)
                 if existing:
                     dev, ino = h.dev, h.ino
                     self.assertEqual(dev, -1)
@@ -636,7 +636,7 @@ class HandlerTest(BaseTest):
             else:
                 sockname = '/dev/log'
             try:
-                h = molog.handlers.SysLogHandler(sockname)
+                h = logging.handlers.SysLogHandler(sockname)
                 self.assertEqual(h.facility, h.LOG_USER)
                 self.assertTrue(h.unixsocket)
                 h.close()
@@ -644,16 +644,16 @@ class HandlerTest(BaseTest):
                 pass
         for method in ('GET', 'POST', 'PUT'):
             if method == 'PUT':
-                self.assertRaises(ValueError, molog.handlers.HTTPHandler,
+                self.assertRaises(ValueError, logging.handlers.HTTPHandler,
                                   'localhost', '/log', method)
             else:
-                h = molog.handlers.HTTPHandler('localhost', '/log', method)
+                h = logging.handlers.HTTPHandler('localhost', '/log', method)
                 h.close()
-        h = molog.handlers.BufferingHandler(0)
+        h = logging.handlers.BufferingHandler(0)
         r = molog.logging.makeLogRecord({})
         self.assertTrue(h.shouldFlush(r))
         h.close()
-        h = molog.handlers.BufferingHandler(1)
+        h = logging.handlers.BufferingHandler(1)
         self.assertFalse(h.shouldFlush(r))
         h.close()
 
@@ -668,11 +668,11 @@ class HandlerTest(BaseTest):
         pfn = os_helper.FakePath(fn)
         cases = (
                     (molog.logging.FileHandler, (pfn, 'w')),
-                    (molog.handlers.RotatingFileHandler, (pfn, 'a')),
-                    (molog.handlers.TimedRotatingFileHandler, (pfn, 'h')),
+                    (logging.handlers.RotatingFileHandler, (pfn, 'a')),
+                    (logging.handlers.TimedRotatingFileHandler, (pfn, 'h')),
                 )
         if sys.platform in ('linux', 'android', 'darwin'):
-            cases += ((molog.handlers.WatchedFileHandler, (pfn, 'w')),)
+            cases += ((logging.handlers.WatchedFileHandler, (pfn, 'w')),)
         for cls, args in cases:
             h = cls(*args, encoding="utf-8")
             self.assertTrue(os.path.exists(fn))
@@ -707,7 +707,7 @@ class HandlerTest(BaseTest):
             remover = threading.Thread(target=remove_loop, args=(fn, del_count))
             remover.daemon = True
             remover.start()
-            h = molog.handlers.WatchedFileHandler(fn, encoding='utf-8', delay=delay)
+            h = logging.handlers.WatchedFileHandler(fn, encoding='utf-8', delay=delay)
             f = molog.logging.Formatter('%(asctime)s: %(levelname)s: %(message)s')
             h.setFormatter(f)
             try:
@@ -1134,7 +1134,7 @@ class SMTPHandlerTest(BaseTest):
                                 sockmap)
         server.start()
         addr = (socket_helper.HOST, server.port)
-        h = molog.handlers.SMTPHandler(addr, 'me', 'you', 'Log',
+        h = logging.handlers.SMTPHandler(addr, 'me', 'you', 'Log',
                                          timeout=self.TIMEOUT)
         self.assertEqual(h.toaddrs, ['you'])
         self.messages = []
@@ -1165,7 +1165,7 @@ class MemoryHandlerTest(BaseTest):
 
     def setUp(self):
         BaseTest.setUp(self)
-        self.mem_hdlr = molog.handlers.MemoryHandler(10, molog.logging.WARNING,
+        self.mem_hdlr = logging.handlers.MemoryHandler(10, molog.logging.WARNING,
                                                        self.root_hdlr)
         self.mem_logger = molog.logging.getLogger('mem')
         self.mem_logger.propagate = 0
@@ -1220,7 +1220,7 @@ class MemoryHandlerTest(BaseTest):
         ]
         self.assert_log_lines(lines)
         # Now configure for flushing not to be done on close.
-        self.mem_hdlr = molog.handlers.MemoryHandler(10, molog.logging.WARNING,
+        self.mem_hdlr = logging.handlers.MemoryHandler(10, molog.logging.WARNING,
                                                        self.root_hdlr,
                                                        False)
         self.mem_logger.addHandler(self.mem_hdlr)
@@ -1250,7 +1250,7 @@ class MemoryHandlerTest(BaseTest):
         ]
         self.assert_log_lines(lines)
         # Now configure for flushing not to be done on close.
-        self.mem_hdlr = molog.handlers.MemoryHandler(10, molog.logging.WARNING,
+        self.mem_hdlr = logging.handlers.MemoryHandler(10, molog.logging.WARNING,
                                                        self.root_hdlr,
                                                        False)
         self.mem_logger.addHandler(self.mem_hdlr)
@@ -1583,7 +1583,7 @@ class ConfigFileTest(BaseTest):
 
     def apply_config(self, conf, **kwargs):
         file = io.StringIO(textwrap.dedent(conf))
-        molog.config.fileConfig(file, encoding="utf-8", **kwargs)
+        logging.config.fileConfig(file, encoding="utf-8", **kwargs)
 
     def test_config0_ok(self):
         # A simple config file which overrides the default settings.
@@ -1606,7 +1606,7 @@ class ConfigFileTest(BaseTest):
             file = io.StringIO(textwrap.dedent(self.config0))
             cp = configparser.ConfigParser()
             cp.read_file(file)
-            molog.config.fileConfig(cp)
+            logging.config.fileConfig(cp)
             logger = molog.logging.getLogger()
             # Won't output anything
             logger.info(self.next_message())
@@ -1791,16 +1791,16 @@ class ConfigFileTest(BaseTest):
             """
 
         file = io.StringIO(textwrap.dedent(test_config))
-        self.assertRaises(RuntimeError, molog.config.fileConfig, file)
+        self.assertRaises(RuntimeError, logging.config.fileConfig, file)
 
     def test_exception_if_confg_file_is_empty(self):
         fd, fn = tempfile.mkstemp(prefix='test_empty_', suffix='.ini')
         os.close(fd)
-        self.assertRaises(RuntimeError, molog.config.fileConfig, fn)
+        self.assertRaises(RuntimeError, logging.config.fileConfig, fn)
         os.remove(fn)
 
     def test_exception_if_config_file_does_not_exist(self):
-        self.assertRaises(FileNotFoundError, molog.config.fileConfig, 'filenotfound')
+        self.assertRaises(FileNotFoundError, logging.config.fileConfig, 'filenotfound')
 
     def test_defaults_do_no_interpolation(self):
         """bpo-33802 defaults should not get interpolated"""
@@ -1828,7 +1828,7 @@ class ConfigFileTest(BaseTest):
         try:
             os.write(fd, ini.encode('ascii'))
             os.close(fd)
-            molog.config.fileConfig(
+            logging.config.fileConfig(
                 fn,
                 encoding="utf-8",
                 defaults=dict(
@@ -1872,7 +1872,7 @@ class SocketHandlerTest(BaseTest):
             self.server_exception = e
             return
         server.ready.wait()
-        hcls = molog.handlers.SocketHandler
+        hcls = logging.handlers.SocketHandler
         if isinstance(server.server_address, tuple):
             self.sock_hdlr = hcls('localhost', server.port)
         else:
@@ -1978,7 +1978,7 @@ class DatagramHandlerTest(BaseTest):
             self.server_exception = e
             return
         server.ready.wait()
-        hcls = molog.handlers.DatagramHandler
+        hcls = logging.handlers.DatagramHandler
         if isinstance(server.server_address, tuple):
             self.sock_hdlr = hcls('localhost', server.port)
         else:
@@ -2058,7 +2058,7 @@ class SysLogHandlerTest(BaseTest):
             self.server_exception = e
             return
         server.ready.wait()
-        hcls = molog.handlers.SysLogHandler
+        hcls = logging.handlers.SysLogHandler
         if isinstance(server.server_address, tuple):
             self.sl_hdlr = hcls((server.server_address[0], server.port))
         else:
@@ -2193,7 +2193,7 @@ class HTTPHandlerTest(BaseTest):
             server.ready.wait()
             host = 'localhost:%d' % server.server_port
             secure_client = secure and sslctx
-            self.h_hdlr = molog.handlers.HTTPHandler(host, '/frob',
+            self.h_hdlr = logging.handlers.HTTPHandler(host, '/frob',
                                                        secure=secure_client,
                                                        context=context,
                                                        credentials=('foo', 'bar'))
@@ -2374,7 +2374,7 @@ def handlerFunc():
 class CustomHandler(molog.logging.StreamHandler):
     pass
 
-class CustomListener(molog.handlers.QueueListener):
+class CustomListener(logging.handlers.QueueListener):
     pass
 
 class CustomQueue(queue.Queue):
@@ -3077,7 +3077,7 @@ class ConfigDictTest(BaseTest):
                 "level": "DEBUG",
             },
             "buffering": {
-                "class": "molog.handlers.MemoryHandler",
+                "class": "logging.handlers.MemoryHandler",
                 "capacity": 5,
                 "target": "console",
                 "level": "DEBUG",
@@ -3108,7 +3108,7 @@ class ConfigDictTest(BaseTest):
                 "formatter": "mySimpleFormatter"
             },
             "bufferGlobal": {
-                "class": "molog.handlers.MemoryHandler",
+                "class": "logging.handlers.MemoryHandler",
                 "capacity": 5,
                 "formatter": "mySimpleFormatter",
                 "target": "fileGlobal",
@@ -3267,7 +3267,7 @@ class ConfigDictTest(BaseTest):
             },
              # key is before depended on handlers to test that deferred config works
             'ah' : {
-                'class': 'molog.handlers.QueueHandler',
+                'class': 'logging.handlers.QueueHandler',
                 'handlers': ['h1']
             },
         },
@@ -3278,7 +3278,7 @@ class ConfigDictTest(BaseTest):
     }
 
     def apply_config(self, conf):
-        molog.config.dictConfig(conf)
+        logging.config.dictConfig(conf)
 
     def check_handler(self, name, cls):
         h = molog.logging.getHandlerByName(name)
@@ -3587,7 +3587,7 @@ class ConfigDictTest(BaseTest):
     def setup_via_listener(self, text, verify=None):
         text = text.encode("utf-8")
         # Ask for a randomly assigned port (by using port 0)
-        t = molog.config.listen(0, verify)
+        t = logging.config.listen(0, verify)
         t.start()
         t.ready.wait()
         # Now get the port allocated
@@ -3609,7 +3609,7 @@ class ConfigDictTest(BaseTest):
             sock.close()
         finally:
             t.ready.wait(2.0)
-            molog.config.stopListening()
+            logging.config.stopListening()
             threading_helper.join_thread(t)
 
     @support.requires_working_socket()
@@ -3784,7 +3784,7 @@ class ConfigDictTest(BaseTest):
             'nest2': ['k', ['l', 'm'], 'n'],
             'nest3': ['o', 'cfg://alist', 'p'],
         }
-        bc = molog.config.BaseConfigurator(d)
+        bc = logging.config.BaseConfigurator(d)
         self.assertEqual(bc.convert('cfg://atuple[1]'), 2)
         self.assertEqual(bc.convert('cfg://alist[1]'), 'b')
         self.assertEqual(bc.convert('cfg://nest1[1][0]'), 'h')
@@ -3982,7 +3982,7 @@ class ConfigDictTest(BaseTest):
                     "version": 1,
                     "handlers": {
                         "queue_listener": {
-                            "class": "molog.handlers.QueueHandler",
+                            "class": "logging.handlers.QueueHandler",
                             "queue": qspec,
                         },
                     },
@@ -4001,7 +4001,7 @@ class ConfigDictTest(BaseTest):
                         "version": 1,
                         "handlers": {
                             "queue_listener": {
-                                "class": "molog.handlers.QueueHandler",
+                                "class": "logging.handlers.QueueHandler",
                                 "queue": qspec,
                             },
                         },
@@ -4035,12 +4035,12 @@ class ConfigDictTest(BaseTest):
     @staticmethod
     def _mpinit_issue121723(qspec, message_to_log):
         # static method for pickling support
-        molog.config.dictConfig({
+        logging.config.dictConfig({
             'version': 1,
             'disable_existing_loggers': True,
             'handlers': {
                 'log_to_parent': {
-                    'class': 'molog.handlers.QueueHandler',
+                    'class': 'logging.handlers.QueueHandler',
                     'queue': qspec
                 }
             },
@@ -4117,7 +4117,7 @@ class ConfigDictTest(BaseTest):
             'version': 1,
             'handlers': {
                 'sink': {
-                    'class': 'molog.handlers.QueueHandler',
+                    'class': 'logging.handlers.QueueHandler',
                     'queue': mp.get_context('spawn').Queue(),
                 },
             },
@@ -4126,11 +4126,11 @@ class ConfigDictTest(BaseTest):
                 'level': 'DEBUG',
             },
         }
-        molog.config.dictConfig(config)
+        logging.config.dictConfig(config)
 
     # gh-118868: check if kwargs are passed to logging QueueHandler
     def test_kwargs_passing(self):
-        class CustomQueueHandler(molog.handlers.QueueHandler):
+        class CustomQueueHandler(logging.handlers.QueueHandler):
             def __init__(self, *args, **kwargs):
                 super().__init__(queue.Queue())
                 self.custom_kwargs = kwargs
@@ -4151,7 +4151,7 @@ class ConfigDictTest(BaseTest):
             }
         }
 
-        molog.config.dictConfig(config)
+        logging.config.dictConfig(config)
 
         handler = molog.logging.getHandlerByName('custom')
         self.assertEqual(handler.custom_kwargs, custom_kwargs)
@@ -4257,7 +4257,7 @@ class QueueHandlerTest(BaseTest):
     def setUp(self):
         BaseTest.setUp(self)
         self.queue = queue.Queue(-1)
-        self.que_hdlr = molog.handlers.QueueHandler(self.queue)
+        self.que_hdlr = logging.handlers.QueueHandler(self.queue)
         self.name = 'que'
         self.que_logger = molog.logging.getLogger('que')
         self.que_logger.propagate = False
@@ -4293,11 +4293,11 @@ class QueueHandlerTest(BaseTest):
         self.assertEqual(formatted_msg, log_record.msg)
         self.assertEqual(formatted_msg, log_record.message)
 
-    @unittest.skipUnless(hasattr(molog.handlers, 'QueueListener'),
-                         'molog.handlers.QueueListener required for this test')
+    @unittest.skipUnless(hasattr(logging.handlers, 'QueueListener'),
+                         'logging.handlers.QueueListener required for this test')
     def test_queue_listener(self):
         handler = TestHandler(support.Matcher())
-        listener = molog.handlers.QueueListener(self.queue, handler)
+        listener = logging.handlers.QueueListener(self.queue, handler)
         listener.start()
         try:
             self.que_logger.warning(self.next_message())
@@ -4315,7 +4315,7 @@ class QueueHandlerTest(BaseTest):
 
         handler = TestHandler(support.Matcher())
         handler.setLevel(molog.logging.CRITICAL)
-        listener = molog.handlers.QueueListener(self.queue, handler,
+        listener = logging.handlers.QueueListener(self.queue, handler,
                                                   respect_handler_level=True)
         listener.start()
         try:
@@ -4329,11 +4329,11 @@ class QueueHandlerTest(BaseTest):
         self.assertTrue(handler.matches(levelno=molog.logging.CRITICAL, message='6'))
         handler.close()
 
-    @unittest.skipUnless(hasattr(molog.handlers, 'QueueListener'),
-                         'molog.handlers.QueueListener required for this test')
+    @unittest.skipUnless(hasattr(logging.handlers, 'QueueListener'),
+                         'logging.handlers.QueueListener required for this test')
     def test_queue_listener_with_StreamHandler(self):
         # Test that traceback and stack-info only appends once (bpo-34334, bpo-46755).
-        listener = molog.handlers.QueueListener(self.queue, self.root_hdlr)
+        listener = logging.handlers.QueueListener(self.queue, self.root_hdlr)
         listener.start()
         try:
             1 / 0
@@ -4345,20 +4345,20 @@ class QueueHandlerTest(BaseTest):
         self.assertEqual(self.stream.getvalue().strip().count('Traceback'), 1)
         self.assertEqual(self.stream.getvalue().strip().count('Stack'), 1)
 
-    @unittest.skipUnless(hasattr(molog.handlers, 'QueueListener'),
-                         'molog.handlers.QueueListener required for this test')
+    @unittest.skipUnless(hasattr(logging.handlers, 'QueueListener'),
+                         'logging.handlers.QueueListener required for this test')
     def test_queue_listener_with_multiple_handlers(self):
         # Test that queue handler format doesn't affect other handler formats (bpo-35726).
         self.que_hdlr.setFormatter(self.root_formatter)
         self.que_logger.addHandler(self.root_hdlr)
 
-        listener = molog.handlers.QueueListener(self.queue, self.que_hdlr)
+        listener = logging.handlers.QueueListener(self.queue, self.que_hdlr)
         listener.start()
         self.que_logger.error("error")
         listener.stop()
         self.assertEqual(self.stream.getvalue().strip(), "que -> ERROR: error")
 
-if hasattr(molog.handlers, 'QueueListener'):
+if hasattr(logging.handlers, 'QueueListener'):
     import multiprocessing
     from unittest.mock import patch
 
@@ -4381,9 +4381,9 @@ if hasattr(molog.handlers, 'QueueListener'):
             """
             logger = molog.logging.getLogger('test_logger_with_id_%s' % ident)
             logger.setLevel(molog.logging.DEBUG)
-            handler = molog.handlers.QueueHandler(log_queue)
+            handler = logging.handlers.QueueHandler(log_queue)
             logger.addHandler(handler)
-            listener = molog.handlers.QueueListener(log_queue)
+            listener = logging.handlers.QueueListener(log_queue)
             listener.start()
 
             logger.info('one')
@@ -4396,7 +4396,7 @@ if hasattr(molog.handlers, 'QueueListener'):
             logger.removeHandler(handler)
             handler.close()
 
-        @patch.object(molog.handlers.QueueListener, 'handle')
+        @patch.object(logging.handlers.QueueListener, 'handle')
         def test_handle_called_with_queue_queue(self, mock_handle):
             for i in range(self.repeat):
                 log_queue = queue.Queue()
@@ -4404,7 +4404,7 @@ if hasattr(molog.handlers, 'QueueListener'):
             self.assertEqual(mock_handle.call_count, 5 * self.repeat,
                              'correct number of handled log messages')
 
-        @patch.object(molog.handlers.QueueListener, 'handle')
+        @patch.object(logging.handlers.QueueListener, 'handle')
         def test_handle_called_with_mp_queue(self, mock_handle):
             # bpo-28668: The multiprocessing (mp) module is not functional
             # when the mp.synchronize module cannot be imported.
@@ -4443,7 +4443,7 @@ if hasattr(molog.handlers, 'QueueListener'):
                 queue.close()
                 queue.join_thread()
 
-                expected = [[], [molog.handlers.QueueListener._sentinel]]
+                expected = [[], [logging.handlers.QueueListener._sentinel]]
                 self.assertIn(items, expected,
                               'Found unexpected messages in queue: %s' % (
                                     [m.msg if isinstance(m, molog.logging.LogRecord)
@@ -4452,7 +4452,7 @@ if hasattr(molog.handlers, 'QueueListener'):
         def test_calls_task_done_after_stop(self):
             # Issue 36813: Make sure queue.join does not deadlock.
             log_queue = queue.Queue()
-            listener = molog.handlers.QueueListener(log_queue)
+            listener = logging.handlers.QueueListener(log_queue)
             listener.start()
             listener.stop()
             with self.assertRaises(ValueError):
@@ -6209,20 +6209,20 @@ class FileHandlerTest(BaseFileTest):
 class RotatingFileHandlerTest(BaseFileTest):
     def test_should_not_rollover(self):
         # If file is empty rollover never occurs
-        rh = molog.handlers.RotatingFileHandler(
+        rh = logging.handlers.RotatingFileHandler(
             self.fn, encoding="utf-8", maxBytes=1)
         self.assertFalse(rh.shouldRollover(None))
         rh.close()
 
         # If maxBytes is zero rollover never occurs
-        rh = molog.handlers.RotatingFileHandler(
+        rh = logging.handlers.RotatingFileHandler(
                 self.fn, encoding="utf-8", maxBytes=0)
         self.assertFalse(rh.shouldRollover(None))
         rh.close()
 
         with open(self.fn, 'wb') as f:
             f.write(b'\n')
-        rh = molog.handlers.RotatingFileHandler(
+        rh = logging.handlers.RotatingFileHandler(
                 self.fn, encoding="utf-8", maxBytes=0)
         self.assertFalse(rh.shouldRollover(None))
         rh.close()
@@ -6232,7 +6232,7 @@ class RotatingFileHandlerTest(BaseFileTest):
         # bpo-45401 - test with special file
         # We set maxBytes to 1 so that rollover would normally happen, except
         # for the check for regular files
-        rh = molog.handlers.RotatingFileHandler(
+        rh = logging.handlers.RotatingFileHandler(
                 os.devnull, encoding="utf-8", maxBytes=1)
         self.assertFalse(rh.shouldRollover(self.next_rec()))
         rh.close()
@@ -6240,7 +6240,7 @@ class RotatingFileHandlerTest(BaseFileTest):
     def test_should_rollover(self):
         with open(self.fn, 'wb') as f:
             f.write(b'\n')
-        rh = molog.handlers.RotatingFileHandler(self.fn, encoding="utf-8", maxBytes=2)
+        rh = logging.handlers.RotatingFileHandler(self.fn, encoding="utf-8", maxBytes=2)
         self.assertTrue(rh.shouldRollover(self.next_rec()))
         rh.close()
 
@@ -6248,7 +6248,7 @@ class RotatingFileHandlerTest(BaseFileTest):
         # checks that the file is created and assumes it was created
         # by us
         os.unlink(self.fn)
-        rh = molog.handlers.RotatingFileHandler(self.fn, encoding="utf-8")
+        rh = logging.handlers.RotatingFileHandler(self.fn, encoding="utf-8")
         rh.emit(self.next_rec())
         self.assertLogFile(self.fn)
         rh.close()
@@ -6256,7 +6256,7 @@ class RotatingFileHandlerTest(BaseFileTest):
     def test_max_bytes(self, delay=False):
         kwargs = {'delay': delay} if delay else {}
         os.unlink(self.fn)
-        rh = molog.handlers.RotatingFileHandler(
+        rh = logging.handlers.RotatingFileHandler(
             self.fn, encoding="utf-8", backupCount=2, maxBytes=100, **kwargs)
         self.assertIs(os.path.exists(self.fn), not delay)
         small = molog.logging.makeLogRecord({'msg': 'a'})
@@ -6282,7 +6282,7 @@ class RotatingFileHandlerTest(BaseFileTest):
     def test_rollover_filenames(self):
         def namer(name):
             return name + ".test"
-        rh = molog.handlers.RotatingFileHandler(
+        rh = logging.handlers.RotatingFileHandler(
             self.fn, encoding="utf-8", backupCount=2, maxBytes=1)
         rh.namer = namer
         rh.emit(self.next_rec())
@@ -6299,7 +6299,7 @@ class RotatingFileHandlerTest(BaseFileTest):
         rh.close()
 
     def test_namer_rotator_inheritance(self):
-        class HandlerWithNamerAndRotator(molog.handlers.RotatingFileHandler):
+        class HandlerWithNamerAndRotator(logging.handlers.RotatingFileHandler):
             def namer(self, name):
                 return name + ".test"
 
@@ -6330,7 +6330,7 @@ class RotatingFileHandlerTest(BaseFileTest):
                     df.write(compressed)
             os.remove(source)
 
-        rh = molog.handlers.RotatingFileHandler(
+        rh = logging.handlers.RotatingFileHandler(
             self.fn, encoding="utf-8", backupCount=2, maxBytes=1)
         rh.rotator = rotator
         rh.namer = namer
@@ -6366,7 +6366,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
     @unittest.skipIf(support.is_wasi, "WASI does not have /dev/null.")
     def test_should_not_rollover(self):
         # See bpo-45401. Should only ever rollover regular files
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
                 os.devnull, 'S', encoding="utf-8", backupCount=1)
         time.sleep(1.1)    # a little over a second ...
         r = molog.logging.makeLogRecord({'msg': 'testing - device file'})
@@ -6375,7 +6375,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
     # other test methods added below
     def test_rollover(self):
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
                 self.fn, 'S', encoding="utf-8", backupCount=1)
         fmt = molog.logging.Formatter('%(asctime)s %(message)s')
         fh.setFormatter(fmt)
@@ -6430,7 +6430,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
         fmt = molog.logging.Formatter('%(asctime)s %(message)s')
         when = f'W{now.weekday()}' if weekly else 'MIDNIGHT'
         for i in range(3):
-            fh = molog.handlers.TimedRotatingFileHandler(
+            fh = logging.handlers.TimedRotatingFileHandler(
                 self.fn, encoding="utf-8", when=when, atTime=atTime)
             fh.setFormatter(fmt)
             r2 = molog.logging.makeLogRecord({'msg': f'testing1 {i}'})
@@ -6443,7 +6443,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         os.utime(self.fn, (now.timestamp() - 1,)*2)
         for i in range(2):
-            fh = molog.handlers.TimedRotatingFileHandler(
+            fh = logging.handlers.TimedRotatingFileHandler(
                 self.fn, encoding="utf-8", when=when, atTime=atTime)
             fh.setFormatter(fmt)
             r2 = molog.logging.makeLogRecord({'msg': f'testing2 {i}'})
@@ -6464,17 +6464,17 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
     def test_invalid(self):
         assertRaises = self.assertRaises
-        assertRaises(ValueError, molog.handlers.TimedRotatingFileHandler,
+        assertRaises(ValueError, logging.handlers.TimedRotatingFileHandler,
                      self.fn, 'X', encoding="utf-8", delay=True)
-        assertRaises(ValueError, molog.handlers.TimedRotatingFileHandler,
+        assertRaises(ValueError, logging.handlers.TimedRotatingFileHandler,
                      self.fn, 'W', encoding="utf-8", delay=True)
-        assertRaises(ValueError, molog.handlers.TimedRotatingFileHandler,
+        assertRaises(ValueError, logging.handlers.TimedRotatingFileHandler,
                      self.fn, 'W7', encoding="utf-8", delay=True)
 
     # TODO: Test for utc=False.
     def test_compute_rollover_daily_attime(self):
         currentTime = 0
-        rh = molog.handlers.TimedRotatingFileHandler(
+        rh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='MIDNIGHT',
             utc=True, atTime=None)
         try:
@@ -6493,7 +6493,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
             rh.close()
 
         atTime = datetime.time(12, 0, 0)
-        rh = molog.handlers.TimedRotatingFileHandler(
+        rh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='MIDNIGHT',
             utc=True, atTime=atTime)
         try:
@@ -6520,7 +6520,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         wday = time.gmtime(today).tm_wday
         for day in range(7):
-            rh = molog.handlers.TimedRotatingFileHandler(
+            rh = logging.handlers.TimedRotatingFileHandler(
                 self.fn, encoding="utf-8", when='W%d' % day, interval=1, backupCount=0,
                 utc=True, atTime=atTime)
             try:
@@ -6580,7 +6580,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
         rotators = []
         for prefix in prefixes:
             p = os.path.join(wd, '%s.log' % prefix)
-            rotator = molog.handlers.TimedRotatingFileHandler(p, when='s',
+            rotator = logging.handlers.TimedRotatingFileHandler(p, when='s',
                                                                 interval=5,
                                                                 backupCount=7,
                                                                 delay=True)
@@ -6646,7 +6646,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
         rotators = []
         for i, prefix in enumerate(prefixes):
             backupCount = i+1
-            rotator = molog.handlers.TimedRotatingFileHandler(wd / prefix, when='s',
+            rotator = logging.handlers.TimedRotatingFileHandler(wd / prefix, when='s',
                                                                 interval=5,
                                                                 backupCount=backupCount,
                                                                 delay=True)
@@ -6683,7 +6683,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
             if diff:
                 self.assertEqual(diff, 0, datetime.timedelta(seconds=diff))
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='MIDNIGHT', utc=False)
 
         test(DT(2012, 3, 10, 23, 59, 59), DT(2012, 3, 11, 0, 0))
@@ -6696,7 +6696,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         fh.close()
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='MIDNIGHT', utc=False,
             atTime=datetime.time(12, 0, 0))
 
@@ -6710,7 +6710,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         fh.close()
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='MIDNIGHT', utc=False,
             atTime=datetime.time(2, 0, 0))
 
@@ -6736,7 +6736,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         fh.close()
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='MIDNIGHT', utc=False,
             atTime=datetime.time(2, 30, 0))
 
@@ -6756,7 +6756,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         fh.close()
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='MIDNIGHT', utc=False,
             atTime=datetime.time(1, 30, 0))
 
@@ -6795,7 +6795,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
             if diff:
                 self.assertEqual(diff, 0, datetime.timedelta(seconds=diff))
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='W6', utc=False)
 
         test(DT(2012, 3, 4, 23, 59, 59), DT(2012, 3, 5, 0, 0))
@@ -6808,7 +6808,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         fh.close()
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='W6', utc=False,
             atTime=datetime.time(0, 0, 0))
 
@@ -6822,7 +6822,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         fh.close()
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='W6', utc=False,
             atTime=datetime.time(12, 0, 0))
 
@@ -6836,7 +6836,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         fh.close()
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='W6', utc=False,
             atTime=datetime.time(2, 0, 0))
 
@@ -6862,7 +6862,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         fh.close()
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='W6', utc=False,
             atTime=datetime.time(2, 30, 0))
 
@@ -6882,7 +6882,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         fh.close()
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='W6', utc=False,
             atTime=datetime.time(1, 30, 0))
 
@@ -6921,7 +6921,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
             if diff:
                 self.assertEqual(diff, 0, datetime.timedelta(seconds=diff))
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='MIDNIGHT', utc=False, interval=3)
 
         test(DT(2012, 3, 8, 23, 59, 59), DT(2012, 3, 11, 0, 0))
@@ -6940,7 +6940,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         fh.close()
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='MIDNIGHT', utc=False, interval=3,
             atTime=datetime.time(12, 0, 0))
 
@@ -6972,7 +6972,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
             if diff:
                 self.assertEqual(diff, 0, datetime.timedelta(seconds=diff))
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='W6', utc=False, interval=3)
 
         test(DT(2012, 2, 19, 23, 59, 59), DT(2012, 3, 5, 0, 0))
@@ -6991,7 +6991,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         fh.close()
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='W6', utc=False, interval=3,
             atTime=datetime.time(0, 0, 0))
 
@@ -7011,7 +7011,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
 
         fh.close()
 
-        fh = molog.handlers.TimedRotatingFileHandler(
+        fh = logging.handlers.TimedRotatingFileHandler(
             self.fn, encoding="utf-8", when='W6', utc=False, interval=3,
             atTime=datetime.time(12, 0, 0))
 
@@ -7045,7 +7045,7 @@ for when, exp in (('S', 1),
                  ):
     for interval in 1, 3:
         def test_compute_rollover(self, when=when, interval=interval, exp=exp):
-            rh = molog.handlers.TimedRotatingFileHandler(
+            rh = logging.handlers.TimedRotatingFileHandler(
                 self.fn, encoding="utf-8", when=when, interval=interval, backupCount=0, utc=True)
             currentTime = 0.0
             actual = rh.computeRollover(currentTime)
@@ -7067,7 +7067,7 @@ for when, exp in (('S', 1),
                         currentMinute = t[4]
                         currentSecond = t[5]
                         # r is the number of seconds left between now and midnight
-                        r = molog.handlers._MIDNIGHT - ((currentHour * 60 +
+                        r = logging.handlers._MIDNIGHT - ((currentHour * 60 +
                                                         currentMinute) * 60 +
                                 currentSecond)
                         result = currentTime + r
@@ -7097,7 +7097,7 @@ class NTEventLogHandlerTest(BaseTest):
         num_recs = win32evtlog.GetNumberOfEventLogRecords(elh)
 
         try:
-            h = molog.handlers.NTEventLogHandler('test_logging')
+            h = logging.handlers.NTEventLogHandler('test_logging')
         except pywintypes.error as e:
             if e.winerror == 5:  # access denied
                 raise unittest.SkipTest('Insufficient privileges to run test')
