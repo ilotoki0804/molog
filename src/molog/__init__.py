@@ -1,55 +1,10 @@
 from ._api import *
-from .logging import (
-    _STYLES,
-    BASIC_FORMAT,
-    CRITICAL,
-    DEBUG,
-    ERROR,
-    FATAL,
-    INFO,
-    NOTSET,
-    WARN,
-    WARNING,
-    BufferingFormatter,
-    FileHandler,
-    Filter,
-    Filterer,
-    Formatter,
-    GenericAlias,
-    Handler,
-    Logger,
-    LoggerAdapter,
-    LogRecord,
-    Manager,
-    NullHandler,
-    PercentStyle,
-    PlaceHolder,
-    RootLogger,
-    StreamHandler,
-    StrFormatStyle,
-    StringTemplateStyle,
-    Template,
-    addLevelName,
-    basicConfig,
-    captureWarnings,
-    currentframe,
-    disable,
-    getHandlerByName,
-    getHandlerNames,
-    getLevelName,
-    getLevelNamesMapping,
-    getLogger,
-    getLoggerClass,
-    getLogRecordFactory,
-    lastResort,
-    logAsyncioTasks,
-    logMultiprocessing,
-    logProcesses,
-    logThreads,
-    makeLogRecord,
-    raiseExceptions,
-    root,
-    setLoggerClass,
-    setLogRecordFactory,
-    shutdown,
-)
+from ._base import *
+from ._capture_warnings import captureWarnings
+from ._filter import *
+from ._formatter import *
+from ._handler import *
+from ._level import *
+from ._logger import *
+from ._manager import *
+from ._record import *

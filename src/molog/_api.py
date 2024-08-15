@@ -1,6 +1,6 @@
 import warnings
 
-from .logging import basicConfig, root
+from ._logger import basicConfig, root
 
 
 def critical(msg, *args, **kwargs):
