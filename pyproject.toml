@@ -29,6 +29,7 @@ ignore = [
     "B905", # use explicit 'strict=' parameter with 'zip()'
     "N818", # Exception name should be named with an Error suffix
     "B028", # No explicit `stacklevel` keyword argument found
+    "RUF021", # Parenthesize `a and b` expressions when chaining `and` and `or` together
 ]
 extend-safe-fixes = [
     "TCH", # move import from and to TYPE_CHECKING blocks
