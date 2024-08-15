@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "molog"
+version = "0.0.0a0"
+description = "logging, but more refined, typed and documented (fork of Python 1054a75)"
+authors = ["ilotoki0804 <ilotoki0804@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.7"
+pytest = "^8.3.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
