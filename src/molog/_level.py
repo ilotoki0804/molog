@@ -40,10 +40,6 @@ def _checkLevel(level: int | str) -> int:
     return rv
 
 
-def getLevelNamesMapping():
-    return _nameToLevel.copy()
-
-
 def getLevelName(level: int) -> str:
     """
     Return the textual or numeric representation of logging level 'level'.
