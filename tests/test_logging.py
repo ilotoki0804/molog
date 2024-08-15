@@ -1649,7 +1649,7 @@ class ConfigFileTest(BaseTest):
             try:
                 raise RuntimeError()
             except RuntimeError:
-                molog.logging.exception("just testing")
+                molog.exception("just testing")
             sys.stdout.seek(0)
             self.assertEqual(output.getvalue(),
                 "ERROR:root:just testing\nGot a [RuntimeError]\n")
@@ -3340,7 +3340,7 @@ class ConfigDictTest(BaseTest):
             try:
                 raise RuntimeError()
             except RuntimeError:
-                molog.logging.exception("just testing")
+                molog.exception("just testing")
             sys.stdout.seek(0)
             self.assertEqual(output.getvalue(),
                 "ERROR:root:just testing\nGot a [RuntimeError]\n")
@@ -3355,7 +3355,7 @@ class ConfigDictTest(BaseTest):
             try:
                 raise RuntimeError()
             except RuntimeError:
-                molog.logging.exception("just testing")
+                molog.exception("just testing")
             sys.stdout.seek(0)
             self.assertEqual(output.getvalue(),
                 "ERROR:root:just testing\nGot a [RuntimeError]\n")
@@ -3532,7 +3532,7 @@ class ConfigDictTest(BaseTest):
             h = molog.logging._handlers['hand1']
             self.assertEqual(h.foo, 'bar')
             self.assertEqual(h.terminator, '!\n')
-            molog.logging.warning('Exclamation')
+            molog.warning('Exclamation')
             self.assertTrue(output.getvalue().endswith('Exclamation!\n'))
 
     def test_config15_ok(self):
@@ -3850,7 +3850,7 @@ class ConfigDictTest(BaseTest):
         }
         with support.captured_stderr() as stderr:
             self.apply_config(config)
-            molog.logging.info('some log')
+            molog.info('some log')
         self.assertEqual(stderr.getvalue(), 'some log my_type\n')
 
     def test_config_callable_filter_works(self):
@@ -3905,9 +3905,9 @@ class ConfigDictTest(BaseTest):
             self.assertEqual(sorted(molog.logging.getHandlerNames()), ['ah', 'h1'])
             self.assertIsNotNone(qh.listener)
             qh.listener.start()
-            molog.logging.debug('foo')
-            molog.logging.info('bar')
-            molog.logging.warning('baz')
+            molog.debug('foo')
+            molog.info('bar')
+            molog.warning('baz')
 
             # Need to let the listener thread finish its work
             while support.sleeping_retry(support.LONG_TIMEOUT,
@@ -4170,7 +4170,7 @@ class ManagerTest(BaseTest):
         man.setLoggerClass(MyLogger)
         logger = man.getLogger('test')
         logger.warning('should appear in logged')
-        molog.logging.warning('should not appear in logged')
+        molog.warning('should not appear in logged')
 
         self.assertEqual(logged, ['should appear in logged'])
 
@@ -4872,14 +4872,14 @@ class ExceptionTest(BaseTest):
         try:
             raise RuntimeError('deliberate mistake')
         except:
-            molog.logging.exception('failed', stack_info=True)
+            molog.exception('failed', stack_info=True)
         r.removeHandler(h)
         h.close()
         r = h.records[0]
         self.assertTrue(r.exc_text.startswith('Traceback (most recent call last):\n'))
         self.assertTrue(r.exc_text.endswith('\nRuntimeError: deliberate mistake'))
         self.assertTrue(r.stack_info.startswith('Stack (most recent call last):\n'))
-        self.assertTrue(r.stack_info.endswith("molog.logging.exception('failed', stack_info=True)"))
+        self.assertTrue(r.stack_info.endswith("molog.exception('failed', stack_info=True)"))
 
 
 class LastResortTest(BaseTest):
@@ -5066,7 +5066,7 @@ class ModuleLevelMiscTest(BaseTest):
         recording = RecordingHandler()
         molog.logging.root.addHandler(recording)
 
-        log_method = getattr(molog.logging, method)
+        log_method = getattr(molog, method)
         if level is not None:
             log_method(level, "test me: %r", recording)
         else:
@@ -5230,7 +5230,7 @@ class LogRecordTest(BaseTest):
         r = molog.logging.getLogger()
         r.addHandler(h)
         d = {'less' : 'more' }
-        molog.logging.warning('less is %(less)s', d)
+        molog.warning('less is %(less)s', d)
         self.assertIs(h.records[0].args, d)
         self.assertEqual(h.records[0].message, 'less is more')
         r.removeHandler(h)
@@ -5238,8 +5238,8 @@ class LogRecordTest(BaseTest):
 
     @staticmethod # pickled as target of child process in the following test
     def _extract_logrecord_process_name(key, logMultiprocessing, conn=None):
-        prev_logMultiprocessing = molog.logging.logMultiprocessing
-        molog.logging.logMultiprocessing = logMultiprocessing
+        prev_logMultiprocessing = molog.logMultiprocessing
+        molog.logMultiprocessing = logMultiprocessing
         try:
             import multiprocessing as mp
             name = mp.current_process().name
@@ -5255,7 +5255,7 @@ class LogRecordTest(BaseTest):
                        'r2.processName': r2.processName,
                       }
         finally:
-            molog.logging.logMultiprocessing = prev_logMultiprocessing
+            molog.logMultiprocessing = prev_logMultiprocessing
         if conn:
             conn.send(results)
         else:
@@ -5267,7 +5267,7 @@ class LogRecordTest(BaseTest):
         multiprocessing_imported = 'multiprocessing' in sys.modules
         try:
             # logMultiprocessing is True by default
-            self.assertEqual(molog.logging.logMultiprocessing, True)
+            self.assertEqual(molog.logMultiprocessing, True)
 
             LOG_MULTI_PROCESSING = True
             # When logMultiprocessing == True:
@@ -5309,15 +5309,15 @@ class LogRecordTest(BaseTest):
         NOT_NONE(r.process)
         NOT_NONE(r.processName)
         NONE(r.taskName)
-        log_threads = molog.logging.logThreads
-        log_processes = molog.logging.logProcesses
-        log_multiprocessing = molog.logging.logMultiprocessing
-        log_asyncio_tasks = molog.logging.logAsyncioTasks
+        log_threads = molog.logThreads
+        log_processes = molog.logProcesses
+        log_multiprocessing = molog.logMultiprocessing
+        log_asyncio_tasks = molog.logAsyncioTasks
         try:
-            molog.logging.logThreads = False
-            molog.logging.logProcesses = False
-            molog.logging.logMultiprocessing = False
-            molog.logging.logAsyncioTasks = False
+            molog.logThreads = False
+            molog.logProcesses = False
+            molog.logMultiprocessing = False
+            molog.logAsyncioTasks = False
             r = molog.logging.makeLogRecord({})
 
             NONE(r.thread)
@@ -5326,10 +5326,10 @@ class LogRecordTest(BaseTest):
             NONE(r.processName)
             NONE(r.taskName)
         finally:
-            molog.logging.logThreads = log_threads
-            molog.logging.logProcesses = log_processes
-            molog.logging.logMultiprocessing = log_multiprocessing
-            molog.logging.logAsyncioTasks = log_asyncio_tasks
+            molog.logThreads = log_threads
+            molog.logProcesses = log_processes
+            molog.logMultiprocessing = log_multiprocessing
+            molog.logAsyncioTasks = log_asyncio_tasks
 
     async def _make_record_async(self, assertion):
         r = molog.logging.makeLogRecord({})
@@ -5340,9 +5340,9 @@ class LogRecordTest(BaseTest):
         try:
             make_record = self._make_record_async
             with asyncio.Runner() as runner:
-                molog.logging.logAsyncioTasks = True
+                molog.logAsyncioTasks = True
                 runner.run(make_record(self.assertIsNotNone))
-                molog.logging.logAsyncioTasks = False
+                molog.logAsyncioTasks = False
                 runner.run(make_record(self.assertIsNone))
         finally:
             asyncio.set_event_loop_policy(None)
@@ -5352,9 +5352,9 @@ class LogRecordTest(BaseTest):
         try:
             make_record = self._make_record_async
             with asyncio.Runner() as runner, support.swap_item(sys.modules, 'asyncio', None):
-                molog.logging.logAsyncioTasks = True
+                molog.logAsyncioTasks = True
                 runner.run(make_record(self.assertIsNone))
-                molog.logging.logAsyncioTasks = False
+                molog.logAsyncioTasks = False
                 runner.run(make_record(self.assertIsNone))
         finally:
             asyncio.set_event_loop_policy(None)
@@ -5409,7 +5409,7 @@ class BasicConfigTest(unittest.TestCase):
     def test_strformatstyle(self):
         with support.captured_stdout() as output:
             molog.logging.basicConfig(stream=sys.stdout, style="{")
-            molog.logging.error("Log an error")
+            molog.error("Log an error")
             sys.stdout.seek(0)
             self.assertEqual(output.getvalue().strip(),
                 "ERROR:root:Log an error")
@@ -5417,7 +5417,7 @@ class BasicConfigTest(unittest.TestCase):
     def test_stringtemplatestyle(self):
         with support.captured_stdout() as output:
             molog.logging.basicConfig(stream=sys.stdout, style="$")
-            molog.logging.error("Log an error")
+            molog.error("Log an error")
             sys.stdout.seek(0)
             self.assertEqual(output.getvalue().strip(),
                 "ERROR:root:Log an error")
@@ -5530,15 +5530,15 @@ class BasicConfigTest(unittest.TestCase):
         old_handlers = [molog.logging.StreamHandler(old_string_io)]
         new_handlers = [molog.logging.StreamHandler(new_string_io)]
         molog.logging.basicConfig(level=molog.logging.WARNING, handlers=old_handlers)
-        molog.logging.warning('warn')
-        molog.logging.info('info')
-        molog.logging.debug('debug')
+        molog.warning('warn')
+        molog.info('info')
+        molog.debug('debug')
         self.assertEqual(len(molog.logging.root.handlers), 1)
         molog.logging.basicConfig(level=molog.logging.INFO, handlers=new_handlers,
                             force=True)
-        molog.logging.warning('warn')
-        molog.logging.info('info')
-        molog.logging.debug('debug')
+        molog.warning('warn')
+        molog.info('info')
+        molog.debug('debug')
         self.assertEqual(len(molog.logging.root.handlers), 1)
         self.assertEqual(old_string_io.getvalue().strip(),
                          'WARNING:root:warn')
@@ -5556,7 +5556,7 @@ class BasicConfigTest(unittest.TestCase):
             handler = molog.logging.root.handlers[0]
             self.assertIsInstance(handler, molog.logging.FileHandler)
             self.assertEqual(handler.encoding, encoding)
-            molog.logging.debug('The Øresund Bridge joins Copenhagen to Malmö')
+            molog.debug('The Øresund Bridge joins Copenhagen to Malmö')
         finally:
             handler.close()
             with open('test.log', encoding='utf-8') as f:
@@ -5576,7 +5576,7 @@ class BasicConfigTest(unittest.TestCase):
             handler = molog.logging.root.handlers[0]
             self.assertIsInstance(handler, molog.logging.FileHandler)
             self.assertEqual(handler.encoding, encoding)
-            molog.logging.debug('The Øresund Bridge joins Copenhagen to Malmö')
+            molog.debug('The Øresund Bridge joins Copenhagen to Malmö')
         finally:
             handler.close()
             with open('test.log', encoding='utf-8') as f:
@@ -5595,7 +5595,7 @@ class BasicConfigTest(unittest.TestCase):
             self.assertIsInstance(handler, molog.logging.FileHandler)
             self.assertEqual(handler.encoding, encoding)
             self.assertEqual(handler.errors, 'backslashreplace')
-            molog.logging.debug('😂: ☃️: The Øresund Bridge joins Copenhagen to Malmö')
+            molog.debug('😂: ☃️: The Øresund Bridge joins Copenhagen to Malmö')
         finally:
             handler.close()
             with open('test.log', encoding='utf-8') as f:
@@ -5624,7 +5624,7 @@ class BasicConfigTest(unittest.TestCase):
                 message.append(str(sys.exception()))
 
             handler.handleError = dummy_handle_error
-            molog.logging.debug('The Øresund Bridge joins Copenhagen to Malmö')
+            molog.debug('The Øresund Bridge joins Copenhagen to Malmö')
             self.assertTrue(message)
             self.assertIn("'ascii' codec can't encode "
                           "character '\\xd8' in position 4:", message[0])
@@ -5639,7 +5639,7 @@ class BasicConfigTest(unittest.TestCase):
     @support.requires_working_socket()
     def test_log_taskName(self):
         async def log_record():
-            molog.logging.warning('hello world')
+            molog.warning('hello world')
 
         handler = None
         log_filename = make_temp_file('.log', 'test-logging-taskname-')
@@ -5655,7 +5655,7 @@ class BasicConfigTest(unittest.TestCase):
             self.assertIsInstance(handler, molog.logging.FileHandler)
 
             with asyncio.Runner(debug=True) as runner:
-                molog.logging.logAsyncioTasks = True
+                molog.logAsyncioTasks = True
                 runner.run(log_record())
             with open(log_filename, encoding='utf-8') as f:
                 data = f.read().strip()
@@ -5668,6 +5668,7 @@ class BasicConfigTest(unittest.TestCase):
 
     def _test_log(self, method, level=None):
         # logging.root has no handlers so basicConfig should be called
+        import molog._api
         called = []
 
         old_basic_config = molog.logging.basicConfig
@@ -5678,9 +5679,9 @@ class BasicConfigTest(unittest.TestCase):
             self.addCleanup(molog.logging.root.setLevel, old_level)
             called.append((a, kw))
 
-        support.patch(self, molog.logging, 'basicConfig', my_basic_config)
+        support.patch(self, molog._api, 'basicConfig', my_basic_config)
 
-        log_method = getattr(molog.logging, method)
+        log_method = getattr(molog, method)
         if level is not None:
             log_method(level, "test me")
         else:
@@ -6014,7 +6015,7 @@ class LoggerTest(BaseTest, AssertErrorMessage):
         lineno = records[-1].lineno
         root_logger = molog.logging.getLogger()
         root_logger.addHandler(self.recording)
-        trigger = molog.logging.warning
+        trigger = molog.warning
         outer()
         self.assertEqual(records[-1].funcName, 'outer')
         root_logger.removeHandler(self.recording)

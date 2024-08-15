@@ -1,3 +1,4 @@
+from ._api import *
 from .logging import (
     _STYLES,
     BASIC_FORMAT,
@@ -31,13 +32,8 @@ from .logging import (
     addLevelName,
     basicConfig,
     captureWarnings,
-    critical,
     currentframe,
-    debug,
     disable,
-    error,
-    exception,
-    fatal,
     getHandlerByName,
     getHandlerNames,
     getLevelName,
@@ -45,9 +41,7 @@ from .logging import (
     getLogger,
     getLoggerClass,
     getLogRecordFactory,
-    info,
     lastResort,
-    log,
     logAsyncioTasks,
     logMultiprocessing,
     logProcesses,
@@ -58,6 +52,4 @@ from .logging import (
     setLoggerClass,
     setLogRecordFactory,
     shutdown,
-    warn,
-    warning,
 )
