@@ -22,16 +22,6 @@ logProcesses = True
 logAsyncioTasks = True
 """If you don't want asyncio task information in the log, set this to False"""
 
-# ---------------------------------------------------------------------------
-#   Level related stuff
-# ---------------------------------------------------------------------------
-
-# Default levels and level names, these can be replaced with any positive set
-# of values having corresponding names. There is a pseudo-level, NOTSET, which
-# is only really there as a lower limit for user-defined levels. Handlers and
-# loggers are initialized with NOTSET so that they will log all messages, even
-# at user-defined levels.
-
 
 if hasattr(sys, "_getframe"):
     def currentframe():  # type: ignore
@@ -44,19 +34,8 @@ else:  # pragma: no cover
         except Exception as exc:
             return exc.__traceback__.tb_frame.f_back  # type: ignore
 
-
-# ---------------------------------------------------------------------------
-#   Thread-related stuff
-# ---------------------------------------------------------------------------
-
-# _lock is used to serialize access to shared data structures in this module.
-# This needs to be an RLock because fileConfig() creates and configures
-# Handlers, and so might arbitrary user threads. Since Handler code updates the
-# shared dictionary _handlers, it needs to acquire the lock. But if configuring,
-# the lock would already have been acquired - so we need an RLock.
-# The same argument applies to Loggers and Manager.loggerDict.
-
 _lock = threading.RLock()
+"""_lock is used to serialize access to shared data structures in this module."""
 
 
 def _prepareFork():
