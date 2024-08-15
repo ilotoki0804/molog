@@ -1057,7 +1057,6 @@ class Handler(Filterer):
                 path = molog.__path__[0].removesuffix("/") + "/logging.py"  # type: ignore
                 while frame and os.path.dirname(frame.f_code.co_filename) == path:
                     frame = frame.f_back
-                    print(frame)
                 if frame:
                     traceback.print_stack(frame, file=sys.stderr)
                 else:
