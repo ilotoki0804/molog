@@ -39,6 +39,7 @@ unfixable = [
 
 [tool.poetry.dependencies]
 python = "^3.12"
+ipykernel = "^6.29.5"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.5.7"
