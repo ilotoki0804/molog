@@ -1,5 +1,5 @@
 from ._base import _lock
-from ._level import _checkLevel
+from ._level import normalizeLevel
 
 Logger = None
 
@@ -84,7 +84,7 @@ class Manager:
 
     @disable.setter
     def disable(self, value):
-        self._disable = _checkLevel(value)
+        self._disable = normalizeLevel(value)
 
     def getLogger(self, name):
         """

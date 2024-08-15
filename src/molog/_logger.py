@@ -42,7 +42,7 @@ class Logger(Filterer):
         """
         Filterer.__init__(self)
         self.name = name
-        self.level = _level._checkLevel(level)
+        self.level = _level.normalizeLevel(level)
         self.parent = None
         self.propagate = True
         self.handlers = []
@@ -53,7 +53,7 @@ class Logger(Filterer):
         """
         Set the logging level of this logger.  level must be an int or a str.
         """
-        self.level = _level._checkLevel(level)
+        self.level = _level.normalizeLevel(level)
         self.manager._clear_cache()
 
     def debug(self, msg, *args, **kwargs):

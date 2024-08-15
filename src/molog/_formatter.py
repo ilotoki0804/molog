@@ -6,10 +6,28 @@ import time
 import traceback
 from string import Formatter as StrFormatter
 from string import Template
-from typing import Callable
+from typing import TYPE_CHECKING, Callable, Literal, LiteralString
+
+if TYPE_CHECKING:
+    from ._record import LogRecord
 
 
-class PercentStyle:
+class Style:
+    default_format: LiteralString
+    asctime_format: LiteralString
+    asctime_search: LiteralString
+
+    def usesTime(self) -> bool:
+        raise NotImplementedError
+
+    def validate(self) -> None:
+        raise NotImplementedError
+
+    def _format(self, record: LogRecord) -> str:
+        raise NotImplementedError
+
+
+class PercentStyle(Style):
     default_format = '%(message)s'
     asctime_format = '%(asctime)s'
     asctime_search = '%(asctime)'
@@ -102,12 +120,14 @@ class StringTemplateStyle(PercentStyle):
         return self._tpl.substitute(**values)
 
 
-BASIC_FORMAT = "%(levelname)s:%(name)s:%(message)s"
-
-_STYLES = {
-    '%': (PercentStyle, BASIC_FORMAT),
+_DefaultStyles = Literal["percent", "format", "template", "%", "{", "$"]
+_STYLES: dict[_DefaultStyles, tuple[type[PercentStyle], str]] = {
+    '%': (PercentStyle, "%(levelname)s:%(name)s:%(message)s"),
     '{': (StrFormatStyle, '{levelname}:{name}:{message}'),
     '$': (StringTemplateStyle, '${levelname}:${name}:${message}'),
+    'percent': (PercentStyle, "%(levelname)s:%(name)s:%(message)s"),
+    'format': (StrFormatStyle, '{levelname}:{name}:{message}'),
+    'template': (StringTemplateStyle, '${levelname}:${name}:${message}'),
 }
 
 
@@ -157,8 +177,15 @@ class Formatter:
 
     converter: Callable[[float], time.struct_time] = time.localtime
 
-    def __init__(self, fmt=None, datefmt=None, style='%', validate=True, *,
-                 defaults=None):
+    def __init__(
+        self,
+        fmt=None,
+        datefmt=None,
+        style: _DefaultStyles = 'percent',
+        validate=True,
+        *,
+        defaults=None
+    ) -> None:
         """
         Initialize the formatter with specified format strings.
 

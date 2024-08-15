@@ -28,16 +28,16 @@ _nameToLevel = {
 }
 
 
-def _checkLevel(level: int | str) -> int:
-    if isinstance(level, int):
-        rv = level
-    elif str(level) == level:
-        if level not in _nameToLevel:
-            raise ValueError(f"Unknown level: {level!r}")
-        rv = _nameToLevel[level]
+def normalizeLevel(level_or_name: int | str) -> int:
+    if isinstance(level_or_name, int):
+        level = level_or_name
+    elif isinstance(level_or_name, str):
+        if level_or_name not in _nameToLevel:
+            raise ValueError(f"Unknown level: {level_or_name!r}")
+        level = _nameToLevel[level_or_name]
     else:
-        raise TypeError(f"Level not an integer or a valid string: {level!r}")
-    return rv
+        raise TypeError(f"Level not an integer or a registered level name: {level_or_name!r}")
+    return level
 
 
 def getLevelName(level: int) -> str:
@@ -58,6 +58,8 @@ def getLevelName(level: int) -> str:
     If no matching numeric or string value is passed in, the string
     ``f'Level {level}'`` is returned.
     """
+    if __debug__ and not isinstance(level, int):
+        raise TypeError(f"Expect integer but got {type(level).__name__!r}")
     result = _levelToName.get(level)
     if result is not None:
         return result
@@ -70,6 +72,12 @@ def addLevelName(level: int, levelName: str) -> None:
 
     This is used when converting levels to text during message formatting.
     """
+    if __debug__:
+        if not isinstance(level, int):
+            raise TypeError(f"Expect integer for level but got {type(level).__name__}")
+        if not isinstance(levelName, str):
+            raise TypeError(f"Expect integer for level name but got {type(levelName).__name__}")
+
     with _lock:
         _levelToName[level] = levelName
         _nameToLevel[levelName] = level

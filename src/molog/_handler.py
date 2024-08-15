@@ -70,7 +70,7 @@ class Handler(Filterer):
         """
         Filterer.__init__(self)
         self._name = None
-        self.level = _level._checkLevel(level)
+        self.level = _level.normalizeLevel(level)
         self.formatter = None
         self._closed = False
         # Add the handler to the global _handlerList (for cleanup on shutdown)
@@ -118,7 +118,7 @@ class Handler(Filterer):
         """
         Set the logging level of this handler.  level must be an int or a str.
         """
-        self.level = _level._checkLevel(level)
+        self.level = _level.normalizeLevel(level)
 
     def format(self, record):
         """
