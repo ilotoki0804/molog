@@ -23,11 +23,14 @@ Copyright (C) 2001-2022 Vinay Sajip. All Rights Reserved.
 To use, simply 'import logging' and log away!
 """
 
+import atexit
 import collections.abc
+import contextlib
 import io
 import os
 import re
 import sys
+import threading
 import time
 import traceback
 import warnings
@@ -83,9 +86,6 @@ __all__ = [
     'warn',
     'warning',
 ]
-
-import contextlib
-import threading
 
 # ---------------------------------------------------------------------------
 #   Miscellaneous module data
@@ -2311,8 +2311,6 @@ def shutdown(handlerList=_handlerList):
 
 
 # Let's try and shutdown automatically on application exit...
-import atexit
-
 atexit.register(shutdown)
 
 # Null handler
