@@ -23,9 +23,9 @@ Copyright (C) 2001-2021 Vinay Sajip. All Rights Reserved.
 To use, simply 'import logging.handlers' and log away!
 """
 
+import contextlib
 import copy
 import io
-import molog
 import os
 import pickle
 import queue
@@ -35,18 +35,21 @@ import struct
 import threading
 import time
 
+import molog
+
 #
 # Some constants...
 #
 
-DEFAULT_TCP_LOGGING_PORT    = 9020
-DEFAULT_UDP_LOGGING_PORT    = 9021
-DEFAULT_HTTP_LOGGING_PORT   = 9022
-DEFAULT_SOAP_LOGGING_PORT   = 9023
-SYSLOG_UDP_PORT             = 514
-SYSLOG_TCP_PORT             = 514
+DEFAULT_TCP_LOGGING_PORT = 9020
+DEFAULT_UDP_LOGGING_PORT = 9021
+DEFAULT_HTTP_LOGGING_PORT = 9022
+DEFAULT_SOAP_LOGGING_PORT = 9023
+SYSLOG_UDP_PORT = 514
+SYSLOG_TCP_PORT = 514
 
 _MIDNIGHT = 24 * 60 * 60  # number of seconds in a day
+
 
 class BaseRotatingHandler(molog.FileHandler):
     """
@@ -95,10 +98,7 @@ class BaseRotatingHandler(molog.FileHandler):
 
         :param default_name: The default name for the log file.
         """
-        if not callable(self.namer):
-            result = default_name
-        else:
-            result = self.namer(default_name)
+        result = default_name if not callable(self.namer) else self.namer(default_name)
         return result
 
     def rotate(self, source, dest):
@@ -121,6 +121,7 @@ class BaseRotatingHandler(molog.FileHandler):
                 os.rename(source, dest)
         else:
             self.rotator(source, dest)
+
 
 class RotatingFileHandler(BaseRotatingHandler):
     """
@@ -200,13 +201,12 @@ class RotatingFileHandler(BaseRotatingHandler):
             if not pos:
                 # gh-116263: Never rollover an empty file
                 return False
-            msg = "%s\n" % self.format(record)
+            msg = f"{self.format(record)}\n"
             if pos + len(msg) >= self.maxBytes:
                 # See bpo-45401: Never rollover anything other than regular files
-                if os.path.exists(self.baseFilename) and not os.path.isfile(self.baseFilename):
-                    return False
-                return True
+                return not (os.path.exists(self.baseFilename) and not os.path.isfile(self.baseFilename))
         return False
+
 
 class TimedRotatingFileHandler(BaseRotatingHandler):
     """
@@ -239,32 +239,32 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
         # Case of the 'when' specifier is not important; lower or upper case
         # will work.
         if self.when == 'S':
-            self.interval = 1 # one second
+            self.interval = 1  # one second
             self.suffix = "%Y-%m-%d_%H-%M-%S"
             extMatch = r"(?<!\d)\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(?!\d)"
         elif self.when == 'M':
-            self.interval = 60 # one minute
+            self.interval = 60  # one minute
             self.suffix = "%Y-%m-%d_%H-%M"
             extMatch = r"(?<!\d)\d{4}-\d{2}-\d{2}_\d{2}-\d{2}(?!\d)"
         elif self.when == 'H':
-            self.interval = 60 * 60 # one hour
+            self.interval = 60 * 60  # one hour
             self.suffix = "%Y-%m-%d_%H"
             extMatch = r"(?<!\d)\d{4}-\d{2}-\d{2}_\d{2}(?!\d)"
         elif self.when == 'D' or self.when == 'MIDNIGHT':
-            self.interval = 60 * 60 * 24 # one day
+            self.interval = 60 * 60 * 24  # one day
             self.suffix = "%Y-%m-%d"
             extMatch = r"(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)"
         elif self.when.startswith('W'):
-            self.interval = 60 * 60 * 24 * 7 # one week
+            self.interval = 60 * 60 * 24 * 7  # one week
             if len(self.when) != 2:
-                raise ValueError("You must specify a day for weekly rollover from 0 to 6 (0 is Monday): %s" % self.when)
+                raise ValueError(f"You must specify a day for weekly rollover from 0 to 6 (0 is Monday): {self.when}")
             if self.when[1] < '0' or self.when[1] > '6':
-                raise ValueError("Invalid day specified for weekly rollover: %s" % self.when)
+                raise ValueError(f"Invalid day specified for weekly rollover: {self.when}")
             self.dayOfWeek = int(self.when[1])
             self.suffix = "%Y-%m-%d"
             extMatch = r"(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)"
         else:
-            raise ValueError("Invalid rollover interval specified: %s" % self.when)
+            raise ValueError(f"Invalid rollover interval specified: {self.when}")
 
         # extMatch is a pattern for matching a datetime suffix in a file name.
         # After custom naming, it is no longer guaranteed to be separated by
@@ -273,14 +273,11 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
         # starts and ends with digits) is not preceded or followed by digits.
         # This reduces the number of false matches and improves performance.
         self.extMatch = re.compile(extMatch, re.ASCII)
-        self.interval = self.interval * interval # multiply by units requested
+        self.interval = self.interval * interval  # multiply by units requested
         # The following line added because the filename passed in could be a
         # path object (see Issue #27493), but self.baseFilename will be a string
         filename = self.baseFilename
-        if os.path.exists(filename):
-            t = int(os.stat(filename).st_mtime)
-        else:
-            t = int(time.time())
+        t = int(os.stat(filename).st_mtime) if os.path.exists(filename) else int(time.time())
         self.rolloverAt = self.computeRollover(t)
 
     def computeRollover(self, currentTime):
@@ -297,10 +294,7 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
         # the rest.  Note that this code doesn't care about leap seconds. :)
         if self.when == 'MIDNIGHT' or self.when.startswith('W'):
             # This could be done with less code, but I wanted it to be clear
-            if self.utc:
-                t = time.gmtime(currentTime)
-            else:
-                t = time.localtime(currentTime)
+            t = time.gmtime(currentTime) if self.utc else time.localtime(currentTime)
             currentHour = t[3]
             currentMinute = t[4]
             currentSecond = t[5]
@@ -309,7 +303,7 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
             if self.atTime is None:
                 rotate_ts = _MIDNIGHT
             else:
-                rotate_ts = ((self.atTime.hour * 60 + self.atTime.minute)*60 +
+                rotate_ts = ((self.atTime.hour * 60 + self.atTime.minute) * 60 +
                     self.atTime.second)
 
             r = rotate_ts - ((currentHour * 60 + currentMinute) * 60 +
@@ -337,12 +331,9 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
             # This is because the above time calculation takes us to midnight on this
             # day, i.e. the start of the next day.
             if self.when.startswith('W'):
-                day = currentDay # 0 is Monday
+                day = currentDay  # 0 is Monday
                 if day != self.dayOfWeek:
-                    if day < self.dayOfWeek:
-                        daysToWait = self.dayOfWeek - day
-                    else:
-                        daysToWait = 6 - day + self.dayOfWeek + 1
+                    daysToWait = self.dayOfWeek - day if day < self.dayOfWeek else 6 - day + self.dayOfWeek + 1
                     result += daysToWait * _MIDNIGHT
                 result += self.interval - _MIDNIGHT * 7
             else:
@@ -353,7 +344,7 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
                 if dstNow != dstAtRollover:
                     if not dstNow:  # DST kicks in before next rollover, so we need to deduct an hour
                         addend = -3600
-                        if not time.localtime(result-3600)[-1]:
+                        if not time.localtime(result - 3600)[-1]:
                             addend = 0
                     else:           # DST bows out before next rollover, so we need to add an hour
                         addend = 3600
@@ -435,10 +426,7 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
             dstNow = time.localtime(currentTime)[-1]
             dstThen = timeTuple[-1]
             if dstNow != dstThen:
-                if dstNow:
-                    addend = 3600
-                else:
-                    addend = -3600
+                addend = 3600 if dstNow else -3600
                 timeTuple = time.localtime(t + addend)
         dfn = self.rotation_filename(self.baseFilename + "." +
                                      time.strftime(self.suffix, timeTuple))
@@ -456,6 +444,7 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
         if not self.delay:
             self.stream = self._open()
         self.rolloverAt = self.computeRollover(currentTime)
+
 
 class WatchedFileHandler(molog.FileHandler):
     """
@@ -605,16 +594,13 @@ class SocketHandler(molog.Handler):
         # Either retryTime is None, in which case this
         # is the first time back after a disconnect, or
         # we've waited long enough.
-        if self.retryTime is None:
-            attempt = True
-        else:
-            attempt = (now >= self.retryTime)
+        attempt = True if self.retryTime is None else now >= self.retryTime
         if attempt:
             try:
                 self.sock = self.makeSocket()
-                self.retryTime = None # next time, no delay before trying
+                self.retryTime = None  # next time, no delay before trying
             except OSError:
-                #Creation failed, so set the retry time and return.
+                # Creation failed, so set the retry time and return.
                 if self.retryTime is None:
                     self.retryPeriod = self.retryStart
                 else:
@@ -632,13 +618,13 @@ class SocketHandler(molog.Handler):
         """
         if self.sock is None:
             self.createSocket()
-        #self.sock can be None either because we haven't reached the retry
-        #time yet, or because we have reached the retry time and retried,
-        #but are still unable to connect.
+        # self.sock can be None either because we haven't reached the retry
+        # time yet, or because we have reached the retry time and retried,
+        # but are still unable to connect.
         if self.sock:
             try:
                 self.sock.sendall(s)
-            except OSError: #pragma: no cover
+            except OSError:  # pragma: no cover
                 self.sock.close()
                 self.sock = None  # so we can call createSocket next time
 
@@ -650,7 +636,7 @@ class SocketHandler(molog.Handler):
         ei = record.exc_info
         if ei:
             # just to get traceback text into record.exc_text ...
-            dummy = self.format(record)
+            self.format(record)
         # See issue #14436: If msg or args are objects, they may not be
         # available on the receiving end. So we convert the msg % args
         # to a string, save it as msg and zap the args.
@@ -674,7 +660,7 @@ class SocketHandler(molog.Handler):
         """
         if self.closeOnError and self.sock:
             self.sock.close()
-            self.sock = None        #try to reconnect next time
+            self.sock = None        # try to reconnect next time
         else:
             molog.Handler.handleError(self, record)
 
@@ -704,6 +690,7 @@ class SocketHandler(molog.Handler):
                 sock.close()
             molog.Handler.close(self)
 
+
 class DatagramHandler(SocketHandler):
     """
     A handler class which writes logging records, in pickle format, to
@@ -727,10 +714,7 @@ class DatagramHandler(SocketHandler):
         The factory method of SocketHandler is here overridden to create
         a UDP socket (SOCK_DGRAM).
         """
-        if self.port is None:
-            family = socket.AF_UNIX
-        else:
-            family = socket.AF_INET
+        family = socket.AF_UNIX if self.port is None else socket.AF_INET
         s = socket.socket(family, socket.SOCK_DGRAM)
         return s
 
@@ -745,6 +729,7 @@ class DatagramHandler(SocketHandler):
         if self.sock is None:
             self.createSocket()
         self.sock.sendto(s, self.address)
+
 
 class SysLogHandler(molog.Handler):
     """
@@ -765,42 +750,42 @@ class SysLogHandler(molog.Handler):
     #
     # priorities (these are ordered)
 
-    LOG_EMERG     = 0       #  system is unusable
-    LOG_ALERT     = 1       #  action must be taken immediately
-    LOG_CRIT      = 2       #  critical conditions
-    LOG_ERR       = 3       #  error conditions
-    LOG_WARNING   = 4       #  warning conditions
-    LOG_NOTICE    = 5       #  normal but significant condition
-    LOG_INFO      = 6       #  informational
-    LOG_DEBUG     = 7       #  debug-level messages
+    LOG_EMERG = 0       # system is unusable
+    LOG_ALERT = 1       # action must be taken immediately
+    LOG_CRIT = 2       # critical conditions
+    LOG_ERR = 3       # error conditions
+    LOG_WARNING = 4       # warning conditions
+    LOG_NOTICE = 5       # normal but significant condition
+    LOG_INFO = 6       # informational
+    LOG_DEBUG = 7       # debug-level messages
 
     #  facility codes
-    LOG_KERN      = 0       #  kernel messages
-    LOG_USER      = 1       #  random user-level messages
-    LOG_MAIL      = 2       #  mail system
-    LOG_DAEMON    = 3       #  system daemons
-    LOG_AUTH      = 4       #  security/authorization messages
-    LOG_SYSLOG    = 5       #  messages generated internally by syslogd
-    LOG_LPR       = 6       #  line printer subsystem
-    LOG_NEWS      = 7       #  network news subsystem
-    LOG_UUCP      = 8       #  UUCP subsystem
-    LOG_CRON      = 9       #  clock daemon
-    LOG_AUTHPRIV  = 10      #  security/authorization messages (private)
-    LOG_FTP       = 11      #  FTP daemon
-    LOG_NTP       = 12      #  NTP subsystem
-    LOG_SECURITY  = 13      #  Log audit
-    LOG_CONSOLE   = 14      #  Log alert
-    LOG_SOLCRON   = 15      #  Scheduling daemon (Solaris)
+    LOG_KERN = 0       # kernel messages
+    LOG_USER = 1       # random user-level messages
+    LOG_MAIL = 2       # mail system
+    LOG_DAEMON = 3       # system daemons
+    LOG_AUTH = 4       # security/authorization messages
+    LOG_SYSLOG = 5       # messages generated internally by syslogd
+    LOG_LPR = 6       # line printer subsystem
+    LOG_NEWS = 7       # network news subsystem
+    LOG_UUCP = 8       # UUCP subsystem
+    LOG_CRON = 9       # clock daemon
+    LOG_AUTHPRIV = 10      # security/authorization messages (private)
+    LOG_FTP = 11      # FTP daemon
+    LOG_NTP = 12      # NTP subsystem
+    LOG_SECURITY = 13      # Log audit
+    LOG_CONSOLE = 14      # Log alert
+    LOG_SOLCRON = 15      # Scheduling daemon (Solaris)
 
     #  other codes through 15 reserved for system use
-    LOG_LOCAL0    = 16      #  reserved for local use
-    LOG_LOCAL1    = 17      #  reserved for local use
-    LOG_LOCAL2    = 18      #  reserved for local use
-    LOG_LOCAL3    = 19      #  reserved for local use
-    LOG_LOCAL4    = 20      #  reserved for local use
-    LOG_LOCAL5    = 21      #  reserved for local use
-    LOG_LOCAL6    = 22      #  reserved for local use
-    LOG_LOCAL7    = 23      #  reserved for local use
+    LOG_LOCAL0 = 16      # reserved for local use
+    LOG_LOCAL1 = 17      # reserved for local use
+    LOG_LOCAL2 = 18      # reserved for local use
+    LOG_LOCAL3 = 19      # reserved for local use
+    LOG_LOCAL4 = 20      # reserved for local use
+    LOG_LOCAL5 = 21      # reserved for local use
+    LOG_LOCAL6 = 22      # reserved for local use
+    LOG_LOCAL7 = 23      # reserved for local use
 
     priority_names = {
         "alert":    LOG_ALERT,
@@ -809,11 +794,11 @@ class SysLogHandler(molog.Handler):
         "debug":    LOG_DEBUG,
         "emerg":    LOG_EMERG,
         "err":      LOG_ERR,
-        "error":    LOG_ERR,        #  DEPRECATED
+        "error":    LOG_ERR,        # DEPRECATED
         "info":     LOG_INFO,
         "notice":   LOG_NOTICE,
-        "panic":    LOG_EMERG,      #  DEPRECATED
-        "warn":     LOG_WARNING,    #  DEPRECATED
+        "panic":    LOG_EMERG,      # DEPRECATED
+        "warn":     LOG_WARNING,    # DEPRECATED
         "warning":  LOG_WARNING,
         }
 
@@ -847,11 +832,11 @@ class SysLogHandler(molog.Handler):
     # Originally added to work around GH-43683. Unnecessary since GH-50043 but kept
     # for backwards compatibility.
     priority_map = {
-        "DEBUG" : "debug",
-        "INFO" : "info",
-        "WARNING" : "warning",
-        "ERROR" : "error",
-        "CRITICAL" : "critical"
+        "DEBUG": "debug",
+        "INFO": "info",
+        "WARNING": "warning",
+        "ERROR": "error",
+        "CRITICAL": "critical"
     }
 
     def __init__(self, address=('localhost', SYSLOG_UDP_PORT),
@@ -916,10 +901,8 @@ class SysLogHandler(molog.Handler):
             # C's openlog() function also ignores connection errors.
             # Moreover, we ignore these errors while logging, so it's not worse
             # to ignore it also here.
-            try:
+            with contextlib.suppress(OSError):
                 self._connect_unixsocket(address)
-            except OSError:
-                pass
         else:
             self.unixsocket = False
             if socktype is None:
@@ -1022,6 +1005,7 @@ class SysLogHandler(molog.Handler):
         except Exception:
             self.handleError(record)
 
+
 class SMTPHandler(molog.Handler):
     """
     A handler class which sends an SMTP email for each logging event.
@@ -1077,9 +1061,9 @@ class SMTPHandler(molog.Handler):
         Format the record and send it to the specified addressees.
         """
         try:
+            import email.utils
             import smtplib
             from email.message import EmailMessage
-            import email.utils
 
             port = self.mailport
             if not port:
@@ -1102,6 +1086,7 @@ class SMTPHandler(molog.Handler):
         except Exception:
             self.handleError(record)
 
+
 class NTEventLogHandler(molog.Handler):
     """
     A handler class which sends events to the NT Event Log. Adds a
@@ -1115,7 +1100,8 @@ class NTEventLogHandler(molog.Handler):
     def __init__(self, appname, dllname=None, logtype="Application"):
         molog.Handler.__init__(self)
         try:
-            import win32evtlogutil, win32evtlog
+            import win32evtlog
+            import win32evtlogutil
             self.appname = appname
             self._welu = win32evtlogutil
             if not dllname:
@@ -1136,15 +1122,13 @@ class NTEventLogHandler(molog.Handler):
                     raise
             self.deftype = win32evtlog.EVENTLOG_ERROR_TYPE
             self.typemap = {
-                molog.DEBUG   : win32evtlog.EVENTLOG_INFORMATION_TYPE,
-                molog.INFO    : win32evtlog.EVENTLOG_INFORMATION_TYPE,
-                molog.WARNING : win32evtlog.EVENTLOG_WARNING_TYPE,
-                molog.ERROR   : win32evtlog.EVENTLOG_ERROR_TYPE,
+                molog.DEBUG: win32evtlog.EVENTLOG_INFORMATION_TYPE,
+                molog.INFO: win32evtlog.EVENTLOG_INFORMATION_TYPE,
+                molog.WARNING: win32evtlog.EVENTLOG_WARNING_TYPE,
+                molog.ERROR: win32evtlog.EVENTLOG_ERROR_TYPE,
                 molog.CRITICAL: win32evtlog.EVENTLOG_ERROR_TYPE,
          }
         except ImportError:
-            print("The Python Win32 extensions for NT (service, event "\
-                        "logging) appear not to be available.")
             self._welu = None
 
     def getMessageID(self, record):
@@ -1206,8 +1190,9 @@ class NTEventLogHandler(molog.Handler):
         Viewer - it needs to be able to access the registry to get the
         DLL name.
         """
-        #self._welu.RemoveSourceFromRegistry(self.appname, self.logtype)
+        # self._welu.RemoveSourceFromRegistry(self.appname, self.logtype)
         molog.Handler.close(self)
+
 
 class HTTPHandler(molog.Handler):
     """
@@ -1269,10 +1254,7 @@ class HTTPHandler(molog.Handler):
             url = self.url
             data = urllib.parse.urlencode(self.mapLogRecord(record))
             if self.method == "GET":
-                if (url.find('?') >= 0):
-                    sep = '&'
-                else:
-                    sep = '?'
+                sep = '&' if url.find('?') >= 0 else '?'
                 url = url + "%c%s" % (sep, data)
             h.putrequest(self.method, url)
             # support multiple hosts on one IP address...
@@ -1289,15 +1271,16 @@ class HTTPHandler(molog.Handler):
                 h.putheader("Content-length", str(len(data)))
             if self.credentials:
                 import base64
-                s = ('%s:%s' % self.credentials).encode('utf-8')
+                s = ('{}:{}'.format(*self.credentials)).encode('utf-8')
                 s = 'Basic ' + base64.b64encode(s).strip().decode('ascii')
                 h.putheader('Authorization', s)
             h.endheaders()
             if self.method == "POST":
                 h.send(data.encode('utf-8'))
-            h.getresponse()    #can't do anything with the result
+            h.getresponse()    # can't do anything with the result
         except Exception:
             self.handleError(record)
+
 
 class BufferingHandler(molog.Handler):
     """
@@ -1352,6 +1335,7 @@ class BufferingHandler(molog.Handler):
             self.flush()
         finally:
             molog.Handler.close(self)
+
 
 class MemoryHandler(BufferingHandler):
     """
@@ -1495,7 +1479,7 @@ class QueueHandler(molog.Handler):
             self.handleError(record)
 
 
-class QueueListener(object):
+class QueueListener:
     """
     This class implements an internal threaded listener which watches for
     LogRecords being added to a queue, removes them and passes them to a
@@ -1552,10 +1536,7 @@ class QueueListener(object):
         """
         record = self.prepare(record)
         for handler in self.handlers:
-            if not self.respect_handler_level:
-                process = True
-            else:
-                process = record.levelno >= handler.level
+            process = True if not self.respect_handler_level else record.levelno >= handler.level
             if process:
                 handler.handle(record)
 
