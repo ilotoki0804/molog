@@ -27,8 +27,9 @@ To use, simply 'import logging' and log away!
 import errno
 import functools
 import io
-import logging
-import logging.handlers
+import molog
+import molog.handlers
+
 import os
 import queue
 import re
@@ -83,7 +84,7 @@ def fileConfig(fname, defaults=None, disable_existing_loggers=True, encoding=Non
     formatters = _create_formatters(cp)
 
     # critical section
-    with logging._lock:
+    with molog._lock:
         _clearExistingHandlers()
 
         # Handlers add themselves to logging._handlers
@@ -123,13 +124,13 @@ def _create_formatters(cp):
         stl = cp.get(sectname, "style", raw=True, fallback='%')
         defaults = cp.get(sectname, "defaults", raw=True, fallback=None)
 
-        c = logging.Formatter
+        c = molog.Formatter
         class_name = cp[sectname].get("class")
         if class_name:
             c = _resolve(class_name)
 
         if defaults is not None:
-            defaults = eval(defaults, vars(logging))
+            defaults = eval(defaults, vars(molog))
             f = c(fs, dfs, stl, defaults=defaults)
         else:
             f = c(fs, dfs, stl)
@@ -151,13 +152,13 @@ def _install_handlers(cp, formatters):
         klass = section["class"]
         fmt = section.get("formatter", "")
         try:
-            klass = eval(klass, vars(logging))
+            klass = eval(klass, vars(molog))
         except (AttributeError, NameError):
             klass = _resolve(klass)
         args = section.get("args", '()')
-        args = eval(args, vars(logging))
+        args = eval(args, vars(molog))
         kwargs = section.get("kwargs", '{}')
-        kwargs = eval(kwargs, vars(logging))
+        kwargs = eval(kwargs, vars(molog))
         h = klass(*args, **kwargs)
         h.name = hand
         if "level" in section:
@@ -165,7 +166,7 @@ def _install_handlers(cp, formatters):
             h.setLevel(level)
         if len(fmt):
             h.setFormatter(formatters[fmt])
-        if issubclass(klass, logging.handlers.MemoryHandler):
+        if issubclass(klass, molog.handlers.MemoryHandler):
             target = section.get("target", "")
             if len(target): #the target handler may not be loaded yet, so keep for later...
                 fixups.append((h, target))
@@ -186,12 +187,12 @@ def _handle_existing_loggers(existing, child_loggers, disable_existing):
     what was intended by the user. Also, allow existing loggers to NOT be
     disabled if disable_existing is false.
     """
-    root = logging.root
+    root = molog.root
     for log in existing:
         logger = root.manager.loggerDict[log]
         if log in child_loggers:
-            if not isinstance(logger, logging.PlaceHolder):
-                logger.setLevel(logging.NOTSET)
+            if not isinstance(logger, molog.PlaceHolder):
+                logger.setLevel(molog.NOTSET)
                 logger.handlers = []
                 logger.propagate = True
         else:
@@ -206,7 +207,7 @@ def _install_loggers(cp, handlers, disable_existing):
     llist = list(_strip_spaces(llist))
     llist.remove("root")
     section = cp["logger_root"]
-    root = logging.root
+    root = molog.root
     log = root
     if "level" in section:
         level = section["level"]
@@ -243,7 +244,7 @@ def _install_loggers(cp, handlers, disable_existing):
         section = cp["logger_%s" % log]
         qn = section["qualname"]
         propagate = section.getint("propagate", fallback=1)
-        logger = logging.getLogger(qn)
+        logger = molog.getLogger(qn)
         if qn in existing:
             i = existing.index(qn) + 1 # start with the entry after qn
             prefixed = qn + "."
@@ -286,9 +287,9 @@ def _install_loggers(cp, handlers, disable_existing):
 
 def _clearExistingHandlers():
     """Clear and close existing handlers"""
-    logging._handlers.clear()
-    logging.shutdown(logging._handlerList[:])
-    del logging._handlerList[:]
+    molog._handlers.clear()
+    molog.shutdown(molog._handlerList[:])
+    del molog._handlerList[:]
 
 
 IDENTIFIER = re.compile('^[a-z_][a-z0-9_]*$', re.I)
@@ -540,20 +541,20 @@ class DictConfigurator(BaseConfigurator):
             raise ValueError("Unsupported version: %s" % config['version'])
         incremental = config.pop('incremental', False)
         EMPTY_DICT = {}
-        with logging._lock:
+        with molog._lock:
             if incremental:
                 handlers = config.get('handlers', EMPTY_DICT)
                 for name in handlers:
-                    if name not in logging._handlers:
+                    if name not in molog._handlers:
                         raise ValueError('No handler found with '
                                          'name %r'  % name)
                     else:
                         try:
-                            handler = logging._handlers[name]
+                            handler = molog._handlers[name]
                             handler_config = handlers[name]
                             level = handler_config.get('level', None)
                             if level:
-                                handler.setLevel(logging._checkLevel(level))
+                                handler.setLevel(molog._checkLevel(level))
                         except Exception as e:
                             raise ValueError('Unable to configure handler '
                                              '%r' % name) from e
@@ -631,7 +632,7 @@ class DictConfigurator(BaseConfigurator):
                 #what's left in existing is the set of loggers
                 #which were in the previous configuration but
                 #which are not in the new configuration.
-                root = logging.root
+                root = molog.root
                 existing = list(root.manager.loggerDict.keys())
                 #The list needs to be sorted so that we can
                 #avoid disabling child loggers of explicitly
@@ -708,7 +709,7 @@ class DictConfigurator(BaseConfigurator):
             defaults = config.get('defaults', None)
 
             if not cname:
-                c = logging.Formatter
+                c = molog.Formatter
             else:
                 c = _resolve(cname)
 
@@ -735,7 +736,7 @@ class DictConfigurator(BaseConfigurator):
             result = self.configure_custom(config)
         else:
             name = config.get('name', '')
-            result = logging.Filter(name)
+            result = molog.Filter(name)
         return result
 
     def add_filters(self, filterer, filters):
@@ -757,7 +758,7 @@ class DictConfigurator(BaseConfigurator):
             q = queue.Queue()  # unbounded
 
         rhl = kwargs.pop('respect_handler_level', False)
-        lklass = kwargs.pop('listener', logging.handlers.QueueListener)
+        lklass = kwargs.pop('listener', molog.handlers.QueueListener)
         handlers = kwargs.pop('handlers', [])
 
         listener = lklass(q, *handlers, respect_handler_level=rhl)
@@ -788,21 +789,21 @@ class DictConfigurator(BaseConfigurator):
                 klass = cname
             else:
                 klass = self.resolve(cname)
-            if issubclass(klass, logging.handlers.MemoryHandler):
+            if issubclass(klass, molog.handlers.MemoryHandler):
                 if 'flushLevel' in config:
-                    config['flushLevel'] = logging._checkLevel(config['flushLevel'])
+                    config['flushLevel'] = molog._checkLevel(config['flushLevel'])
                 if 'target' in config:
                     # Special case for handler which refers to another handler
                     try:
                         tn = config['target']
                         th = self.config['handlers'][tn]
-                        if not isinstance(th, logging.Handler):
+                        if not isinstance(th, molog.Handler):
                             config.update(config_copy)  # restore for deferred cfg
                             raise TypeError('target not configured yet')
                         config['target'] = th
                     except Exception as e:
                         raise ValueError('Unable to set target handler %r' % tn) from e
-            elif issubclass(klass, logging.handlers.QueueHandler):
+            elif issubclass(klass, molog.handlers.QueueHandler):
                 # Another special case for handler which refers to other handlers
                 # if 'handlers' not in config:
                     # raise ValueError('No handlers specified for a QueueHandler')
@@ -824,13 +825,13 @@ class DictConfigurator(BaseConfigurator):
                 if 'listener' in config:
                     lspec = config['listener']
                     if isinstance(lspec, type):
-                        if not issubclass(lspec, logging.handlers.QueueListener):
+                        if not issubclass(lspec, molog.handlers.QueueListener):
                             raise TypeError('Invalid listener specifier %r' % lspec)
                     else:
                         if isinstance(lspec, str):
                             listener = self.resolve(lspec)
                             if isinstance(listener, type) and\
-                                not issubclass(listener, logging.handlers.QueueListener):
+                                not issubclass(listener, molog.handlers.QueueListener):
                                 raise TypeError('Invalid listener specifier %r' % lspec)
                         elif isinstance(lspec, dict):
                             if '()' not in lspec:
@@ -846,7 +847,7 @@ class DictConfigurator(BaseConfigurator):
                     try:
                         for hn in config['handlers']:
                             h = self.config['handlers'][hn]
-                            if not isinstance(h, logging.Handler):
+                            if not isinstance(h, molog.Handler):
                                 config.update(config_copy)  # restore for deferred cfg
                                 raise TypeError('Required handler %r '
                                                 'is not configured yet' % hn)
@@ -854,13 +855,13 @@ class DictConfigurator(BaseConfigurator):
                     except Exception as e:
                         raise ValueError('Unable to set required handler %r' % hn) from e
                     config['handlers'] = hlist
-            elif issubclass(klass, logging.handlers.SMTPHandler) and\
+            elif issubclass(klass, molog.handlers.SMTPHandler) and\
                 'mailhost' in config:
                 config['mailhost'] = self.as_tuple(config['mailhost'])
-            elif issubclass(klass, logging.handlers.SysLogHandler) and\
+            elif issubclass(klass, molog.handlers.SysLogHandler) and\
                 'address' in config:
                 config['address'] = self.as_tuple(config['address'])
-            if issubclass(klass, logging.handlers.QueueHandler):
+            if issubclass(klass, molog.handlers.QueueHandler):
                 factory = functools.partial(self._configure_queue_handler, klass)
             else:
                 factory = klass
@@ -879,7 +880,7 @@ class DictConfigurator(BaseConfigurator):
         if formatter:
             result.setFormatter(formatter)
         if level is not None:
-            result.setLevel(logging._checkLevel(level))
+            result.setLevel(molog._checkLevel(level))
         if filters:
             self.add_filters(result, filters)
         props = config.pop('.', None)
@@ -902,7 +903,7 @@ class DictConfigurator(BaseConfigurator):
         """
         level = config.get('level', None)
         if level is not None:
-            logger.setLevel(logging._checkLevel(level))
+            logger.setLevel(molog._checkLevel(level))
         if not incremental:
             #Remove any existing handlers
             for h in logger.handlers[:]:
@@ -916,7 +917,7 @@ class DictConfigurator(BaseConfigurator):
 
     def configure_logger(self, name, config, incremental=False):
         """Configure a non-root logger from a dictionary."""
-        logger = logging.getLogger(name)
+        logger = molog.getLogger(name)
         self.common_logger_config(logger, config, incremental)
         logger.disabled = False
         propagate = config.get('propagate', None)
@@ -925,7 +926,7 @@ class DictConfigurator(BaseConfigurator):
 
     def configure_root(self, config, incremental=False):
         """Configure a root logger from a dictionary."""
-        root = logging.getLogger()
+        root = molog.getLogger()
         self.common_logger_config(root, config, incremental)
 
 dictConfigClass = DictConfigurator
@@ -1012,7 +1013,7 @@ def listen(port=DEFAULT_LOGGING_CONFIG_PORT, verify=None):
         def __init__(self, host='localhost', port=DEFAULT_LOGGING_CONFIG_PORT,
                      handler=None, ready=None, verify=None):
             ThreadingTCPServer.__init__(self, (host, port), handler)
-            with logging._lock:
+            with molog._lock:
                 self.abort = 0
             self.timeout = 1
             self.ready = ready
@@ -1027,7 +1028,7 @@ def listen(port=DEFAULT_LOGGING_CONFIG_PORT, verify=None):
                                            self.timeout)
                 if rd:
                     self.handle_request()
-                with logging._lock:
+                with molog._lock:
                     abort = self.abort
             self.server_close()
 
@@ -1049,7 +1050,7 @@ def listen(port=DEFAULT_LOGGING_CONFIG_PORT, verify=None):
                 self.port = server.server_address[1]
             self.ready.set()
             global _listener
-            with logging._lock:
+            with molog._lock:
                 _listener = server
             server.serve_until_stopped()
 
@@ -1060,7 +1061,7 @@ def stopListening():
     Stop the listening server which was created with a call to listen().
     """
     global _listener
-    with logging._lock:
+    with molog._lock:
         if _listener:
             _listener.abort = 1
             _listener = None
