@@ -68,36 +68,23 @@ __all__ = [
 #   Miscellaneous module data
 # ---------------------------------------------------------------------------
 
-#
-# _startTime is used as the base when calculating the relative time of events
-#
 _startTime = time.time_ns()
+"""_startTime is used as the base when calculating the relative time of events"""
 
-#
-# raiseExceptions is used to see if exceptions during handling should be
-# propagated
-#
 raiseExceptions = True
+"""raiseExceptions is used to see if exceptions during handling should be propagated"""
 
-#
-# If you don't want threading information in the log, set this to False
-#
 logThreads = True
+"""If you don't want threading information in the log, set this to False"""
 
-#
-# If you don't want multiprocessing information in the log, set this to False
-#
 logMultiprocessing = True
+"""If you don't want multiprocessing information in the log, set this to False"""
 
-#
-# If you don't want process information in the log, set this to False
-#
 logProcesses = True
+"""If you don't want process information in the log, set this to False"""
 
-#
-# If you don't want asyncio task information in the log, set this to False
-#
 logAsyncioTasks = True
+"""If you don't want asyncio task information in the log, set this to False"""
 
 # ---------------------------------------------------------------------------
 #   Level related stuff
@@ -108,7 +95,6 @@ logAsyncioTasks = True
 # is only really there as a lower limit for user-defined levels. Handlers and
 # loggers are initialized with NOTSET so that they will log all messages, even
 # at user-defined levels.
-#
 
 CRITICAL = 50
 FATAL = CRITICAL
@@ -193,7 +179,6 @@ else:  # pragma: no cover
         except Exception as exc:
             return exc.__traceback__.tb_frame.f_back  # type: ignore
 
-#
 # _srcfile is used when walking the stack to check when we've got the first
 # caller stack frame, by skipping frames whose filename is that of this
 # module's source. It therefore should contain the filename of this module's
@@ -203,8 +188,6 @@ else:  # pragma: no cover
 # have __file__ set, for some reason (see Issue #21736). Thus, we get the
 # filename from a handy code object from a function defined in this module.
 # (There's no particular reason for picking addLevelName.)
-#
-
 _srcfile = os.path.normcase(addLevelName.__code__.co_filename)
 
 
@@ -239,14 +222,13 @@ def _checkLevel(level):
 #   Thread-related stuff
 # ---------------------------------------------------------------------------
 
-#
 # _lock is used to serialize access to shared data structures in this module.
 # This needs to be an RLock because fileConfig() creates and configures
 # Handlers, and so might arbitrary user threads. Since Handler code updates the
 # shared dictionary _handlers, it needs to acquire the lock. But if configuring,
 # the lock would already have been acquired - so we need an RLock.
 # The same argument applies to Loggers and Manager.loggerDict.
-#
+
 _lock = threading.RLock()
 
 

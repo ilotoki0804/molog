@@ -14,10 +14,6 @@ import time
 
 from . import logging
 
-#
-# Some constants...
-#
-
 DEFAULT_TCP_LOGGING_PORT = 9020
 DEFAULT_UDP_LOGGING_PORT = 9021
 DEFAULT_HTTP_LOGGING_PORT = 9022
