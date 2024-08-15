@@ -18,7 +18,7 @@
 
 Copyright (C) 2001-2022 Vinay Sajip. All Rights Reserved.
 """
-import molog
+import molog.logging
 import molog.handlers
 import molog.config
 
@@ -99,29 +99,29 @@ class BaseTest(unittest.TestCase):
         so that we can examine log output as we want."""
         self._threading_key = threading_helper.threading_setup()
 
-        logger_dict = molog.getLogger().manager.loggerDict
-        with molog._lock:
-            self.saved_handlers = molog._handlers.copy()
-            self.saved_handler_list = molog._handlerList[:]
+        logger_dict = molog.logging.getLogger().manager.loggerDict
+        with molog.logging._lock:
+            self.saved_handlers = molog.logging._handlers.copy()
+            self.saved_handler_list = molog.logging._handlerList[:]
             self.saved_loggers = saved_loggers = logger_dict.copy()
-            self.saved_name_to_level = molog._nameToLevel.copy()
-            self.saved_level_to_name = molog._levelToName.copy()
+            self.saved_name_to_level = molog.logging._nameToLevel.copy()
+            self.saved_level_to_name = molog.logging._levelToName.copy()
             self.logger_states = logger_states = {}
             for name in saved_loggers:
                 logger_states[name] = getattr(saved_loggers[name],
                                               'disabled', None)
 
         # Set two unused loggers
-        self.logger1 = molog.getLogger("\xab\xd7\xbb")
-        self.logger2 = molog.getLogger("\u013f\u00d6\u0047")
+        self.logger1 = molog.logging.getLogger("\xab\xd7\xbb")
+        self.logger2 = molog.logging.getLogger("\u013f\u00d6\u0047")
 
-        self.root_logger = molog.getLogger("")
+        self.root_logger = molog.logging.getLogger("")
         self.original_logging_level = self.root_logger.getEffectiveLevel()
 
         self.stream = io.StringIO()
-        self.root_logger.setLevel(molog.DEBUG)
-        self.root_hdlr = molog.StreamHandler(self.stream)
-        self.root_formatter = molog.Formatter(self.log_format)
+        self.root_logger.setLevel(molog.logging.DEBUG)
+        self.root_hdlr = molog.logging.StreamHandler(self.stream)
+        self.root_formatter = molog.logging.Formatter(self.log_format)
         self.root_hdlr.setFormatter(self.root_formatter)
         if self.logger1.hasHandlers():
             hlist = self.logger1.handlers + self.root_logger.handlers
@@ -143,15 +143,15 @@ class BaseTest(unittest.TestCase):
             self.root_logger.removeHandler(h)
             h.close()
         self.root_logger.setLevel(self.original_logging_level)
-        with molog._lock:
-            molog._levelToName.clear()
-            molog._levelToName.update(self.saved_level_to_name)
-            molog._nameToLevel.clear()
-            molog._nameToLevel.update(self.saved_name_to_level)
-            molog._handlers.clear()
-            molog._handlers.update(self.saved_handlers)
-            molog._handlerList[:] = self.saved_handler_list
-            manager = molog.getLogger().manager
+        with molog.logging._lock:
+            molog.logging._levelToName.clear()
+            molog.logging._levelToName.update(self.saved_level_to_name)
+            molog.logging._nameToLevel.clear()
+            molog.logging._nameToLevel.update(self.saved_name_to_level)
+            molog.logging._handlers.clear()
+            molog.logging._handlers.update(self.saved_handlers)
+            molog.logging._handlerList[:] = self.saved_handler_list
+            manager = molog.logging.getLogger().manager
             manager.disable = 0
             loggerDict = manager.loggerDict
             loggerDict.clear()
@@ -196,23 +196,23 @@ class BuiltinLevelsTest(BaseTest):
         # Logging levels in a flat logger namespace.
         m = self.next_message
 
-        ERR = molog.getLogger("ERR")
-        ERR.setLevel(molog.ERROR)
-        INF = molog.LoggerAdapter(molog.getLogger("INF"), {})
-        INF.setLevel(molog.INFO)
-        DEB = molog.getLogger("DEB")
-        DEB.setLevel(molog.DEBUG)
+        ERR = molog.logging.getLogger("ERR")
+        ERR.setLevel(molog.logging.ERROR)
+        INF = molog.logging.LoggerAdapter(molog.logging.getLogger("INF"), {})
+        INF.setLevel(molog.logging.INFO)
+        DEB = molog.logging.getLogger("DEB")
+        DEB.setLevel(molog.logging.DEBUG)
 
         # These should log.
-        ERR.log(molog.CRITICAL, m())
+        ERR.log(molog.logging.CRITICAL, m())
         ERR.error(m())
 
-        INF.log(molog.CRITICAL, m())
+        INF.log(molog.logging.CRITICAL, m())
         INF.error(m())
         INF.warning(m())
         INF.info(m())
 
-        DEB.log(molog.CRITICAL, m())
+        DEB.log(molog.logging.CRITICAL, m())
         DEB.error(m())
         DEB.warning(m())
         DEB.info(m())
@@ -243,13 +243,13 @@ class BuiltinLevelsTest(BaseTest):
         # Logging levels in a nested namespace, all explicitly set.
         m = self.next_message
 
-        INF = molog.getLogger("INF")
-        INF.setLevel(molog.INFO)
-        INF_ERR  = molog.getLogger("INF.ERR")
-        INF_ERR.setLevel(molog.ERROR)
+        INF = molog.logging.getLogger("INF")
+        INF.setLevel(molog.logging.INFO)
+        INF_ERR  = molog.logging.getLogger("INF.ERR")
+        INF_ERR.setLevel(molog.logging.ERROR)
 
         # These should log.
-        INF_ERR.log(molog.CRITICAL, m())
+        INF_ERR.log(molog.logging.CRITICAL, m())
         INF_ERR.error(m())
 
         # These should not log.
@@ -266,20 +266,20 @@ class BuiltinLevelsTest(BaseTest):
         # Logging levels in a nested namespace, inherited from parent loggers.
         m = self.next_message
 
-        INF = molog.getLogger("INF")
-        INF.setLevel(molog.INFO)
-        INF_ERR  = molog.getLogger("INF.ERR")
-        INF_ERR.setLevel(molog.ERROR)
-        INF_UNDEF = molog.getLogger("INF.UNDEF")
-        INF_ERR_UNDEF = molog.getLogger("INF.ERR.UNDEF")
-        UNDEF = molog.getLogger("UNDEF")
+        INF = molog.logging.getLogger("INF")
+        INF.setLevel(molog.logging.INFO)
+        INF_ERR  = molog.logging.getLogger("INF.ERR")
+        INF_ERR.setLevel(molog.logging.ERROR)
+        INF_UNDEF = molog.logging.getLogger("INF.UNDEF")
+        INF_ERR_UNDEF = molog.logging.getLogger("INF.ERR.UNDEF")
+        UNDEF = molog.logging.getLogger("UNDEF")
 
         # These should log.
-        INF_UNDEF.log(molog.CRITICAL, m())
+        INF_UNDEF.log(molog.logging.CRITICAL, m())
         INF_UNDEF.error(m())
         INF_UNDEF.warning(m())
         INF_UNDEF.info(m())
-        INF_ERR_UNDEF.log(molog.CRITICAL, m())
+        INF_ERR_UNDEF.log(molog.logging.CRITICAL, m())
         INF_ERR_UNDEF.error(m())
 
         # These should not log.
@@ -301,15 +301,15 @@ class BuiltinLevelsTest(BaseTest):
         # Logging levels when some parent does not exist yet.
         m = self.next_message
 
-        INF = molog.getLogger("INF")
-        GRANDCHILD = molog.getLogger("INF.BADPARENT.UNDEF")
-        CHILD = molog.getLogger("INF.BADPARENT")
-        INF.setLevel(molog.INFO)
+        INF = molog.logging.getLogger("INF")
+        GRANDCHILD = molog.logging.getLogger("INF.BADPARENT.UNDEF")
+        CHILD = molog.logging.getLogger("INF.BADPARENT")
+        INF.setLevel(molog.logging.INFO)
 
         # These should log.
-        GRANDCHILD.log(molog.FATAL, m())
+        GRANDCHILD.log(molog.logging.FATAL, m())
         GRANDCHILD.info(m())
-        CHILD.log(molog.FATAL, m())
+        CHILD.log(molog.logging.FATAL, m())
         CHILD.info(m())
 
         # These should not log.
@@ -325,20 +325,20 @@ class BuiltinLevelsTest(BaseTest):
 
     def test_regression_22386(self):
         """See issue #22386 for more information."""
-        self.assertEqual(molog.getLevelName('INFO'), molog.INFO)
-        self.assertEqual(molog.getLevelName(molog.INFO), 'INFO')
+        self.assertEqual(molog.logging.getLevelName('INFO'), molog.logging.INFO)
+        self.assertEqual(molog.logging.getLevelName(molog.logging.INFO), 'INFO')
 
     def test_issue27935(self):
-        fatal = molog.getLevelName('FATAL')
-        self.assertEqual(fatal, molog.FATAL)
+        fatal = molog.logging.getLevelName('FATAL')
+        self.assertEqual(fatal, molog.logging.FATAL)
 
     def test_regression_29220(self):
         """See issue #29220 for more information."""
-        molog.addLevelName(molog.INFO, '')
-        self.addCleanup(molog.addLevelName, molog.INFO, 'INFO')
-        self.assertEqual(molog.getLevelName(molog.INFO), '')
-        self.assertEqual(molog.getLevelName(molog.NOTSET), 'NOTSET')
-        self.assertEqual(molog.getLevelName('NOTSET'), molog.NOTSET)
+        molog.logging.addLevelName(molog.logging.INFO, '')
+        self.addCleanup(molog.logging.addLevelName, molog.logging.INFO, 'INFO')
+        self.assertEqual(molog.logging.getLevelName(molog.logging.INFO), '')
+        self.assertEqual(molog.logging.getLevelName(molog.logging.NOTSET), 'NOTSET')
+        self.assertEqual(molog.logging.getLevelName('NOTSET'), molog.logging.NOTSET)
 
 class BasicFilterTest(BaseTest):
 
@@ -347,14 +347,14 @@ class BasicFilterTest(BaseTest):
     def test_filter(self):
         # Only messages satisfying the specified criteria pass through the
         #  filter.
-        filter_ = molog.Filter("spam.eggs")
+        filter_ = molog.logging.Filter("spam.eggs")
         handler = self.root_logger.handlers[0]
         try:
             handler.addFilter(filter_)
-            spam = molog.getLogger("spam")
-            spam_eggs = molog.getLogger("spam.eggs")
-            spam_eggs_fish = molog.getLogger("spam.eggs.fish")
-            spam_bakedbeans = molog.getLogger("spam.bakedbeans")
+            spam = molog.logging.getLogger("spam")
+            spam_eggs = molog.logging.getLogger("spam.eggs")
+            spam_eggs_fish = molog.logging.getLogger("spam.eggs.fish")
+            spam_bakedbeans = molog.logging.getLogger("spam.bakedbeans")
 
             spam.info(self.next_message())
             spam_eggs.info(self.next_message())  # Good.
@@ -380,10 +380,10 @@ class BasicFilterTest(BaseTest):
         handler = self.root_logger.handlers[0]
         try:
             handler.addFilter(filterfunc)
-            spam = molog.getLogger("spam")
-            spam_eggs = molog.getLogger("spam.eggs")
-            spam_eggs_fish = molog.getLogger("spam.eggs.fish")
-            spam_bakedbeans = molog.getLogger("spam.bakedbeans")
+            spam = molog.logging.getLogger("spam")
+            spam_eggs = molog.logging.getLogger("spam.eggs")
+            spam_eggs_fish = molog.logging.getLogger("spam.eggs.fish")
+            spam_bakedbeans = molog.logging.getLogger("spam.bakedbeans")
 
             spam.info(self.next_message())
             spam_eggs.info(self.next_message())  # Good.
@@ -398,8 +398,8 @@ class BasicFilterTest(BaseTest):
             handler.removeFilter(filterfunc)
 
     def test_empty_filter(self):
-        f = molog.Filter()
-        r = molog.makeLogRecord({'name': 'spam.eggs'})
+        f = molog.logging.Filter()
+        r = molog.logging.makeLogRecord({'name': 'spam.eggs'})
         self.assertTrue(f.filter(r))
 
 #
@@ -440,14 +440,14 @@ my_logging_levels = {
     BORING      : 'Boring',
 }
 
-class GarrulousFilter(molog.Filter):
+class GarrulousFilter(molog.logging.Filter):
 
     """A filter which blocks garrulous messages."""
 
     def filter(self, record):
         return record.levelno != GARRULOUS
 
-class VerySpecificFilter(molog.Filter):
+class VerySpecificFilter(molog.logging.Filter):
 
     """A filter which blocks sociable and taciturn messages."""
 
@@ -465,14 +465,14 @@ class CustomLevelsAndFiltersTest(BaseTest):
     def setUp(self):
         BaseTest.setUp(self)
         for k, v in my_logging_levels.items():
-            molog.addLevelName(k, v)
+            molog.logging.addLevelName(k, v)
 
     def log_at_all_levels(self, logger):
         for lvl in LEVEL_RANGE:
             logger.log(lvl, self.next_message())
 
     def test_handler_filter_replaces_record(self):
-        def replace_message(record: molog.LogRecord):
+        def replace_message(record: molog.logging.LogRecord):
             record = copy.copy(record)
             record.msg = "new message!"
             return record
@@ -483,12 +483,12 @@ class CustomLevelsAndFiltersTest(BaseTest):
         # Then we can confirm that `replace_message()` was able to
         # replace the log record without having a side effect on
         # other loggers or handlers.
-        parent = molog.getLogger("parent")
-        child = molog.getLogger("parent.child")
+        parent = molog.logging.getLogger("parent")
+        child = molog.logging.getLogger("parent.child")
         stream_1 = io.StringIO()
         stream_2 = io.StringIO()
-        handler_1 = molog.StreamHandler(stream_1)
-        handler_2 = molog.StreamHandler(stream_2)
+        handler_1 = molog.logging.StreamHandler(stream_1)
+        handler_2 = molog.logging.StreamHandler(stream_2)
         handler_2.addFilter(replace_message)
         parent.addHandler(handler_1)
         child.addHandler(handler_2)
@@ -502,13 +502,13 @@ class CustomLevelsAndFiltersTest(BaseTest):
     def test_logging_filter_replaces_record(self):
         records = set()
 
-        class RecordingFilter(molog.Filter):
-            def filter(self, record: molog.LogRecord):
+        class RecordingFilter(molog.logging.Filter):
+            def filter(self, record: molog.logging.LogRecord):
                 records.add(id(record))
                 return copy.copy(record)
 
-        logger = molog.getLogger("logger")
-        logger.setLevel(molog.INFO)
+        logger = molog.logging.getLogger("logger")
+        logger.setLevel(molog.logging.INFO)
         logger.addFilter(RecordingFilter())
         logger.addFilter(RecordingFilter())
 
@@ -544,7 +544,7 @@ class CustomLevelsAndFiltersTest(BaseTest):
                 ('Silent', '10'),
             ])
         finally:
-            self.root_logger.handlers[0].setLevel(molog.NOTSET)
+            self.root_logger.handlers[0].setLevel(molog.logging.NOTSET)
 
     def test_specific_filters(self):
         # Set a specific filter object on the handler, and then add another
@@ -597,7 +597,7 @@ def make_temp_file(*args, **kwargs):
 
 class HandlerTest(BaseTest):
     def test_name(self):
-        h = molog.Handler()
+        h = molog.logging.Handler()
         h.name = 'generic'
         self.assertEqual(h.name, 'generic')
         h.name = 'anothergeneric'
@@ -617,7 +617,7 @@ class HandlerTest(BaseTest):
                     dev, ino = h.dev, h.ino
                     self.assertEqual(dev, -1)
                     self.assertEqual(ino, -1)
-                    r = molog.makeLogRecord({'msg': 'Test'})
+                    r = molog.logging.makeLogRecord({'msg': 'Test'})
                     h.handle(r)
                     # Now remove the file.
                     os.unlink(fn)
@@ -650,7 +650,7 @@ class HandlerTest(BaseTest):
                 h = molog.handlers.HTTPHandler('localhost', '/log', method)
                 h.close()
         h = molog.handlers.BufferingHandler(0)
-        r = molog.makeLogRecord({})
+        r = molog.logging.makeLogRecord({})
         self.assertTrue(h.shouldFlush(r))
         h.close()
         h = molog.handlers.BufferingHandler(1)
@@ -667,7 +667,7 @@ class HandlerTest(BaseTest):
         os.unlink(fn)
         pfn = os_helper.FakePath(fn)
         cases = (
-                    (molog.FileHandler, (pfn, 'w')),
+                    (molog.logging.FileHandler, (pfn, 'w')),
                     (molog.handlers.RotatingFileHandler, (pfn, 'a')),
                     (molog.handlers.TimedRotatingFileHandler, (pfn, 'h')),
                 )
@@ -708,12 +708,12 @@ class HandlerTest(BaseTest):
             remover.daemon = True
             remover.start()
             h = molog.handlers.WatchedFileHandler(fn, encoding='utf-8', delay=delay)
-            f = molog.Formatter('%(asctime)s: %(levelname)s: %(message)s')
+            f = molog.logging.Formatter('%(asctime)s: %(levelname)s: %(message)s')
             h.setFormatter(f)
             try:
                 for _ in range(log_count):
                     time.sleep(0.005)
-                    r = molog.makeLogRecord({'msg': 'testing' })
+                    r = molog.logging.makeLogRecord({'msg': 'testing' })
                     try:
                         self.handle_time = time.time()
                         h.handle(r)
@@ -738,31 +738,31 @@ class HandlerTest(BaseTest):
     @skip_if_tsan_fork
     def test_post_fork_child_no_deadlock(self):
         """Ensure child logging locks are not held; bpo-6721 & bpo-36533."""
-        class _OurHandler(molog.Handler):
+        class _OurHandler(molog.logging.Handler):
             def __init__(self):
                 super().__init__()
-                self.sub_handler = molog.StreamHandler(
+                self.sub_handler = molog.logging.StreamHandler(
                     stream=open('/dev/null', 'wt', encoding='utf-8'))
 
             def emit(self, record):
                 with self.sub_handler.lock:
                     self.sub_handler.emit(record)
 
-        self.assertEqual(len(molog._handlers), 0)
+        self.assertEqual(len(molog.logging._handlers), 0)
         refed_h = _OurHandler()
         self.addCleanup(refed_h.sub_handler.stream.close)
         refed_h.name = 'because we need at least one for this test'
-        self.assertGreater(len(molog._handlers), 0)
-        self.assertGreater(len(molog._at_fork_reinit_lock_weakset), 1)
-        test_logger = molog.getLogger('test_post_fork_child_no_deadlock')
+        self.assertGreater(len(molog.logging._handlers), 0)
+        self.assertGreater(len(molog.logging._at_fork_reinit_lock_weakset), 1)
+        test_logger = molog.logging.getLogger('test_post_fork_child_no_deadlock')
         test_logger.addHandler(refed_h)
-        test_logger.setLevel(molog.DEBUG)
+        test_logger.setLevel(molog.logging.DEBUG)
 
         locks_held__ready_to_fork = threading.Event()
         fork_happened__release_locks_and_end_thread = threading.Event()
 
         def lock_holder_thread_fn():
-            with molog._lock, refed_h.lock:
+            with molog.logging._lock, refed_h.lock:
                 # Tell the main thread to do the fork.
                 locks_held__ready_to_fork.set()
 
@@ -805,44 +805,44 @@ class BadStream(object):
     def write(self, data):
         raise RuntimeError('deliberate mistake')
 
-class TestStreamHandler(molog.StreamHandler):
+class TestStreamHandler(molog.logging.StreamHandler):
     __test__ = False
 
     def handleError(self, record):
         self.error_record = record
 
 class StreamWithIntName(object):
-    level = molog.NOTSET
+    level = molog.logging.NOTSET
     name = 2
 
 class StreamHandlerTest(BaseTest):
     def test_error_handling(self):
         h = TestStreamHandler(BadStream())
-        r = molog.makeLogRecord({})
-        old_raise = molog.raiseExceptions
+        r = molog.logging.makeLogRecord({})
+        old_raise = molog.logging.raiseExceptions
 
         try:
             h.handle(r)
             self.assertIs(h.error_record, r)
 
-            h = molog.StreamHandler(BadStream())
+            h = molog.logging.StreamHandler(BadStream())
             with support.captured_stderr() as stderr:
                 h.handle(r)
                 msg = '\nRuntimeError: deliberate mistake\n'
                 self.assertIn(msg, stderr.getvalue())
 
-            molog.raiseExceptions = False
+            molog.logging.raiseExceptions = False
             with support.captured_stderr() as stderr:
                 h.handle(r)
                 self.assertEqual('', stderr.getvalue())
         finally:
-            molog.raiseExceptions = old_raise
+            molog.logging.raiseExceptions = old_raise
 
     def test_stream_setting(self):
         """
         Test setting the handler's stream
         """
-        h = molog.StreamHandler()
+        h = molog.logging.StreamHandler()
         stream = io.StringIO()
         old = h.setStream(stream)
         self.assertIs(old, sys.stderr)
@@ -853,7 +853,7 @@ class StreamHandlerTest(BaseTest):
         self.assertIsNone(actual)
 
     def test_can_represent_stream_with_int_name(self):
-        h = molog.StreamHandler(StreamWithIntName())
+        h = molog.logging.StreamHandler(StreamWithIntName())
         self.assertEqual(repr(h), '<StreamHandler 2 (NOTSET)>')
 
 # -- The following section could be moved into a server_helper.py module
@@ -1138,7 +1138,7 @@ class SMTPHandlerTest(BaseTest):
                                          timeout=self.TIMEOUT)
         self.assertEqual(h.toaddrs, ['you'])
         self.messages = []
-        r = molog.makeLogRecord({'msg': 'Hello \u2713'})
+        r = molog.logging.makeLogRecord({'msg': 'Hello \u2713'})
         self.handled = threading.Event()
         h.handle(r)
         self.handled.wait(self.TIMEOUT)
@@ -1165,9 +1165,9 @@ class MemoryHandlerTest(BaseTest):
 
     def setUp(self):
         BaseTest.setUp(self)
-        self.mem_hdlr = molog.handlers.MemoryHandler(10, molog.WARNING,
+        self.mem_hdlr = molog.handlers.MemoryHandler(10, molog.logging.WARNING,
                                                        self.root_hdlr)
-        self.mem_logger = molog.getLogger('mem')
+        self.mem_logger = molog.logging.getLogger('mem')
         self.mem_logger.propagate = 0
         self.mem_logger.addHandler(self.mem_hdlr)
 
@@ -1220,7 +1220,7 @@ class MemoryHandlerTest(BaseTest):
         ]
         self.assert_log_lines(lines)
         # Now configure for flushing not to be done on close.
-        self.mem_hdlr = molog.handlers.MemoryHandler(10, molog.WARNING,
+        self.mem_hdlr = molog.handlers.MemoryHandler(10, molog.logging.WARNING,
                                                        self.root_hdlr,
                                                        False)
         self.mem_logger.addHandler(self.mem_hdlr)
@@ -1243,14 +1243,14 @@ class MemoryHandlerTest(BaseTest):
         self.mem_logger.info(self.next_message())
         self.assert_log_lines([])
         # Default behaviour is to flush on close. Check that it happens.
-        molog.shutdown(handlerList=[molog.weakref.ref(self.mem_hdlr)])
+        molog.logging.shutdown(handlerList=[molog.logging.weakref.ref(self.mem_hdlr)])
         lines = [
             ('DEBUG', '1'),
             ('INFO', '2'),
         ]
         self.assert_log_lines(lines)
         # Now configure for flushing not to be done on close.
-        self.mem_hdlr = molog.handlers.MemoryHandler(10, molog.WARNING,
+        self.mem_hdlr = molog.handlers.MemoryHandler(10, molog.logging.WARNING,
                                                        self.root_hdlr,
                                                        False)
         self.mem_logger.addHandler(self.mem_hdlr)
@@ -1259,7 +1259,7 @@ class MemoryHandlerTest(BaseTest):
         self.mem_logger.info(self.next_message())
         self.assert_log_lines(lines)  # no change
         # assert that no new lines have been added after shutdown
-        molog.shutdown(handlerList=[molog.weakref.ref(self.mem_hdlr)])
+        molog.logging.shutdown(handlerList=[molog.logging.weakref.ref(self.mem_hdlr)])
         self.assert_log_lines(lines) # no change
 
     @threading_helper.requires_working_threading()
@@ -1290,7 +1290,7 @@ class MemoryHandlerTest(BaseTest):
                 threading_helper.join_thread(thread)
 
 
-class ExceptionFormatter(molog.Formatter):
+class ExceptionFormatter(molog.logging.Formatter):
     """A special exception formatter."""
     def formatException(self, ei):
         return "Got a [%s]" % ei[0].__name__
@@ -1589,7 +1589,7 @@ class ConfigFileTest(BaseTest):
         # A simple config file which overrides the default settings.
         with support.captured_stdout() as output:
             self.apply_config(self.config0)
-            logger = molog.getLogger()
+            logger = molog.logging.getLogger()
             # Won't output anything
             logger.info(self.next_message())
             # Outputs a message
@@ -1607,7 +1607,7 @@ class ConfigFileTest(BaseTest):
             cp = configparser.ConfigParser()
             cp.read_file(file)
             molog.config.fileConfig(cp)
-            logger = molog.getLogger()
+            logger = molog.logging.getLogger()
             # Won't output anything
             logger.info(self.next_message())
             # Outputs a message
@@ -1622,7 +1622,7 @@ class ConfigFileTest(BaseTest):
         # A config file defining a sub-parser as well.
         with support.captured_stdout() as output:
             self.apply_config(config)
-            logger = molog.getLogger("compiler.parser")
+            logger = molog.logging.getLogger("compiler.parser")
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -1645,11 +1645,11 @@ class ConfigFileTest(BaseTest):
         # A config file specifying a custom formatter class.
         with support.captured_stdout() as output:
             self.apply_config(self.config4)
-            logger = molog.getLogger()
+            logger = molog.logging.getLogger()
             try:
                 raise RuntimeError()
             except RuntimeError:
-                molog.exception("just testing")
+                molog.logging.exception("just testing")
             sys.stdout.seek(0)
             self.assertEqual(output.getvalue(),
                 "ERROR:root:just testing\nGot a [RuntimeError]\n")
@@ -1665,13 +1665,13 @@ class ConfigFileTest(BaseTest):
     def test_config7_ok(self):
         with support.captured_stdout() as output:
             self.apply_config(self.config1a)
-            logger = molog.getLogger("compiler.parser")
+            logger = molog.logging.getLogger("compiler.parser")
             # See issue #11424. compiler-hyphenated sorts
             # between compiler and compiler.xyz and this
             # was preventing compiler.xyz from being included
             # in the child loggers of compiler because of an
             # overzealous loop termination condition.
-            hyphenated = molog.getLogger('compiler-hyphenated')
+            hyphenated = molog.logging.getLogger('compiler-hyphenated')
             # All will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -1685,12 +1685,12 @@ class ConfigFileTest(BaseTest):
             self.assert_log_lines([])
         with support.captured_stdout() as output:
             self.apply_config(self.config7)
-            logger = molog.getLogger("compiler.parser")
+            logger = molog.logging.getLogger("compiler.parser")
             self.assertFalse(logger.disabled)
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
-            logger = molog.getLogger("compiler.lexer")
+            logger = molog.logging.getLogger("compiler.lexer")
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -1720,22 +1720,22 @@ class ConfigFileTest(BaseTest):
             self.apply_config(config8)
             self.apply_config(config8)
 
-        handler = molog.root.handlers[0]
+        handler = molog.logging.root.handlers[0]
         self.addCleanup(closeFileHandler, handler, fn)
 
     def test_config9_ok(self):
         self.apply_config(self.config9)
-        formatter = molog.root.handlers[0].formatter
-        result = formatter.format(molog.makeLogRecord({'msg': 'test'}))
+        formatter = molog.logging.root.handlers[0].formatter
+        result = formatter.format(molog.logging.makeLogRecord({'msg': 'test'}))
         self.assertEqual(result, 'test ++ defaultvalue')
-        result = formatter.format(molog.makeLogRecord(
+        result = formatter.format(molog.logging.makeLogRecord(
             {'msg': 'test', 'customfield': "customvalue"}))
         self.assertEqual(result, 'test ++ customvalue')
 
 
     def test_logger_disabling(self):
         self.apply_config(self.disable_test)
-        logger = molog.getLogger('some_pristine_logger')
+        logger = molog.logging.getLogger('some_pristine_logger')
         self.assertFalse(logger.disabled)
         self.apply_config(self.disable_test)
         self.assertTrue(logger.disabled)
@@ -1764,7 +1764,7 @@ class ConfigFileTest(BaseTest):
             format=%(levelname)s ++ %(message)s
             """
         self.apply_config(test_config)
-        self.assertEqual(molog.getLogger().handlers[0].name, 'hand1')
+        self.assertEqual(molog.logging.getLogger().handlers[0].name, 'hand1')
 
     def test_exception_if_confg_file_is_invalid(self):
         test_config = """
@@ -1904,7 +1904,7 @@ class SocketHandlerTest(BaseTest):
             while len(chunk) < slen:
                 chunk = chunk + conn.recv(slen - len(chunk))
             obj = pickle.loads(chunk)
-            record = molog.makeLogRecord(obj)
+            record = molog.logging.makeLogRecord(obj)
             self.log_output += record.msg + '\n'
             self.handled.release()
 
@@ -1912,7 +1912,7 @@ class SocketHandlerTest(BaseTest):
         # The log message sent to the SocketHandler is properly received.
         if self.server_exception:
             self.skipTest(self.server_exception)
-        logger = molog.getLogger("tcp")
+        logger = molog.logging.getLogger("tcp")
         logger.error("spam")
         self.handled.acquire()
         logger.debug("eggs")
@@ -2003,7 +2003,7 @@ class DatagramHandlerTest(BaseTest):
         slen = struct.pack('>L', 0) # length of prefix
         packet = request.packet[len(slen):]
         obj = pickle.loads(packet)
-        record = molog.makeLogRecord(obj)
+        record = molog.logging.makeLogRecord(obj)
         self.log_output += record.msg + '\n'
         self.handled.set()
 
@@ -2011,7 +2011,7 @@ class DatagramHandlerTest(BaseTest):
         # The log message sent to the DatagramHandler is properly received.
         if self.server_exception:
             self.skipTest(self.server_exception)
-        logger = molog.getLogger("udp")
+        logger = molog.logging.getLogger("udp")
         logger.error("spam")
         self.handled.wait()
         self.handled.clear()
@@ -2087,7 +2087,7 @@ class SysLogHandlerTest(BaseTest):
         if self.server_exception:
             self.skipTest(self.server_exception)
         # The log message sent to the SysLogHandler is properly received.
-        logger = molog.getLogger("slh")
+        logger = molog.logging.getLogger("slh")
         logger.error("sp\xe4m")
         self.handled.wait(support.LONG_TIMEOUT)
         self.assertEqual(self.log_output, b'<11>sp\xc3\xa4m\x00')
@@ -2103,7 +2103,7 @@ class SysLogHandlerTest(BaseTest):
         self.assertEqual(self.log_output, b'<11>h\xc3\xa4m-sp\xc3\xa4m')
 
     def test_udp_reconnection(self):
-        logger = molog.getLogger("slh")
+        logger = molog.logging.getLogger("slh")
         self.sl_hdlr.close()
         self.handled.clear()
         logger.error("sp\xe4m")
@@ -2167,7 +2167,7 @@ class HTTPHandlerTest(BaseTest):
 
     def test_output(self):
         # The log message sent to the HTTPHandler is properly received.
-        logger = molog.getLogger("http")
+        logger = molog.logging.getLogger("http")
         root_logger = self.root_logger
         root_logger.removeHandler(self.root_logger.handlers[0])
         for secure in (False, True):
@@ -2252,10 +2252,10 @@ class MemoryTest(BaseTest):
     def test_persistent_loggers(self):
         # Logger objects are persistent and retain their configuration, even
         #  if visible references are destroyed.
-        self.root_logger.setLevel(molog.INFO)
-        foo = molog.getLogger("foo")
+        self.root_logger.setLevel(molog.logging.INFO)
+        foo = molog.logging.getLogger("foo")
         self._watch_for_survival(foo)
-        foo.setLevel(molog.DEBUG)
+        foo.setLevel(molog.logging.DEBUG)
         self.root_logger.debug(self.next_message())
         foo.debug(self.next_message())
         self.assert_log_lines([
@@ -2265,7 +2265,7 @@ class MemoryTest(BaseTest):
         # foo has survived.
         self._assertTruesurvival()
         # foo has retained its settings.
-        bar = molog.getLogger("foo")
+        bar = molog.logging.getLogger("foo")
         bar.debug(self.next_message())
         self.assert_log_lines([
             ('foo', 'DEBUG', '2'),
@@ -2276,12 +2276,12 @@ class MemoryTest(BaseTest):
 class EncodingTest(BaseTest):
     def test_encoding_plain_file(self):
         # In Python 2.x, a plain file object is treated as having no encoding.
-        log = molog.getLogger("test")
+        log = molog.logging.getLogger("test")
         fn = make_temp_file(".log", "test_logging-1-")
         # the non-ascii data we write to the log.
         data = "foo\x80"
         try:
-            handler = molog.FileHandler(fn, encoding="utf-8")
+            handler = molog.logging.FileHandler(fn, encoding="utf-8")
             log.addHandler(handler)
             try:
                 # write non-ascii data to the log.
@@ -2300,7 +2300,7 @@ class EncodingTest(BaseTest):
                 os.remove(fn)
 
     def test_encoding_cyrillic_unicode(self):
-        log = molog.getLogger("test")
+        log = molog.logging.getLogger("test")
         # Get a message in Unicode: Do svidanya in Cyrillic (meaning goodbye)
         message = '\u0434\u043e \u0441\u0432\u0438\u0434\u0430\u043d\u0438\u044f'
         # Ensure it's written in a Cyrillic encoding
@@ -2308,7 +2308,7 @@ class EncodingTest(BaseTest):
         writer_class.encoding = 'cp1251'
         stream = io.BytesIO()
         writer = writer_class(stream, 'strict')
-        handler = molog.StreamHandler(writer)
+        handler = molog.logging.StreamHandler(writer)
         log.addHandler(handler)
         try:
             log.warning(message)
@@ -2362,16 +2362,16 @@ class EncodingTest(BaseTest):
 
 
 def formatFunc(format, datefmt=None):
-    return molog.Formatter(format, datefmt)
+    return molog.logging.Formatter(format, datefmt)
 
 class myCustomFormatter:
     def __init__(self, fmt, datefmt=None):
         pass
 
 def handlerFunc():
-    return molog.StreamHandler()
+    return molog.logging.StreamHandler()
 
-class CustomHandler(molog.StreamHandler):
+class CustomHandler(molog.logging.StreamHandler):
     pass
 
 class CustomListener(molog.handlers.QueueListener):
@@ -3036,7 +3036,7 @@ class ConfigDictTest(BaseTest):
         },
     }
 
-    class CustomFormatter(molog.Formatter):
+    class CustomFormatter(molog.logging.Formatter):
         custom_property = "."
 
         def format(self, record):
@@ -3281,15 +3281,15 @@ class ConfigDictTest(BaseTest):
         molog.config.dictConfig(conf)
 
     def check_handler(self, name, cls):
-        h = molog.getHandlerByName(name)
+        h = molog.logging.getHandlerByName(name)
         self.assertIsInstance(h, cls)
 
     def test_config0_ok(self):
         # A simple config which overrides the default settings.
         with support.captured_stdout() as output:
             self.apply_config(self.config0)
-            self.check_handler('hand1', molog.StreamHandler)
-            logger = molog.getLogger()
+            self.check_handler('hand1', molog.logging.StreamHandler)
+            logger = molog.logging.getLogger()
             # Won't output anything
             logger.info(self.next_message())
             # Outputs a message
@@ -3304,7 +3304,7 @@ class ConfigDictTest(BaseTest):
         # A config defining a sub-parser as well.
         with support.captured_stdout() as output:
             self.apply_config(config)
-            logger = molog.getLogger("compiler.parser")
+            logger = molog.logging.getLogger("compiler.parser")
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -3335,12 +3335,12 @@ class ConfigDictTest(BaseTest):
         # A config specifying a custom formatter class.
         with support.captured_stdout() as output:
             self.apply_config(self.config4)
-            self.check_handler('hand1', molog.StreamHandler)
+            self.check_handler('hand1', molog.logging.StreamHandler)
             #logger = logging.getLogger()
             try:
                 raise RuntimeError()
             except RuntimeError:
-                molog.exception("just testing")
+                molog.logging.exception("just testing")
             sys.stdout.seek(0)
             self.assertEqual(output.getvalue(),
                 "ERROR:root:just testing\nGot a [RuntimeError]\n")
@@ -3355,7 +3355,7 @@ class ConfigDictTest(BaseTest):
             try:
                 raise RuntimeError()
             except RuntimeError:
-                molog.exception("just testing")
+                molog.logging.exception("just testing")
             sys.stdout.seek(0)
             self.assertEqual(output.getvalue(),
                 "ERROR:root:just testing\nGot a [RuntimeError]\n")
@@ -3372,7 +3372,7 @@ class ConfigDictTest(BaseTest):
     def test_config7_ok(self):
         with support.captured_stdout() as output:
             self.apply_config(self.config1)
-            logger = molog.getLogger("compiler.parser")
+            logger = molog.logging.getLogger("compiler.parser")
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -3384,10 +3384,10 @@ class ConfigDictTest(BaseTest):
             self.assert_log_lines([])
         with support.captured_stdout() as output:
             self.apply_config(self.config7)
-            self.check_handler('hand1', molog.StreamHandler)
-            logger = molog.getLogger("compiler.parser")
+            self.check_handler('hand1', molog.logging.StreamHandler)
+            logger = molog.logging.getLogger("compiler.parser")
             self.assertTrue(logger.disabled)
-            logger = molog.getLogger("compiler.lexer")
+            logger = molog.logging.getLogger("compiler.lexer")
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -3402,7 +3402,7 @@ class ConfigDictTest(BaseTest):
     def test_config_8_ok(self):
         with support.captured_stdout() as output:
             self.apply_config(self.config1)
-            logger = molog.getLogger("compiler.parser")
+            logger = molog.logging.getLogger("compiler.parser")
             # All will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -3414,13 +3414,13 @@ class ConfigDictTest(BaseTest):
             self.assert_log_lines([])
         with support.captured_stdout() as output:
             self.apply_config(self.config8)
-            self.check_handler('hand1', molog.StreamHandler)
-            logger = molog.getLogger("compiler.parser")
+            self.check_handler('hand1', molog.logging.StreamHandler)
+            logger = molog.logging.getLogger("compiler.parser")
             self.assertFalse(logger.disabled)
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
-            logger = molog.getLogger("compiler.lexer")
+            logger = molog.logging.getLogger("compiler.lexer")
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -3436,14 +3436,14 @@ class ConfigDictTest(BaseTest):
     def test_config_8a_ok(self):
         with support.captured_stdout() as output:
             self.apply_config(self.config1a)
-            self.check_handler('hand1', molog.StreamHandler)
-            logger = molog.getLogger("compiler.parser")
+            self.check_handler('hand1', molog.logging.StreamHandler)
+            logger = molog.logging.getLogger("compiler.parser")
             # See issue #11424. compiler-hyphenated sorts
             # between compiler and compiler.xyz and this
             # was preventing compiler.xyz from being included
             # in the child loggers of compiler because of an
             # overzealous loop termination condition.
-            hyphenated = molog.getLogger('compiler-hyphenated')
+            hyphenated = molog.logging.getLogger('compiler-hyphenated')
             # All will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -3457,13 +3457,13 @@ class ConfigDictTest(BaseTest):
             self.assert_log_lines([])
         with support.captured_stdout() as output:
             self.apply_config(self.config8a)
-            self.check_handler('hand1', molog.StreamHandler)
-            logger = molog.getLogger("compiler.parser")
+            self.check_handler('hand1', molog.logging.StreamHandler)
+            logger = molog.logging.getLogger("compiler.parser")
             self.assertFalse(logger.disabled)
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
-            logger = molog.getLogger("compiler.lexer")
+            logger = molog.logging.getLogger("compiler.lexer")
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -3481,8 +3481,8 @@ class ConfigDictTest(BaseTest):
     def test_config_9_ok(self):
         with support.captured_stdout() as output:
             self.apply_config(self.config9)
-            self.check_handler('hand1', molog.StreamHandler)
-            logger = molog.getLogger("compiler.parser")
+            self.check_handler('hand1', molog.logging.StreamHandler)
+            logger = molog.logging.getLogger("compiler.parser")
             # Nothing will be output since both handler and logger are set to WARNING
             logger.info(self.next_message())
             self.assert_log_lines([], stream=output)
@@ -3500,16 +3500,16 @@ class ConfigDictTest(BaseTest):
     def test_config_10_ok(self):
         with support.captured_stdout() as output:
             self.apply_config(self.config10)
-            self.check_handler('hand1', molog.StreamHandler)
-            logger = molog.getLogger("compiler.parser")
+            self.check_handler('hand1', molog.logging.StreamHandler)
+            logger = molog.logging.getLogger("compiler.parser")
             logger.warning(self.next_message())
-            logger = molog.getLogger('compiler')
+            logger = molog.logging.getLogger('compiler')
             # Not output, because filtered
             logger.warning(self.next_message())
-            logger = molog.getLogger('compiler.lexer')
+            logger = molog.logging.getLogger('compiler.lexer')
             # Not output, because filtered
             logger.warning(self.next_message())
-            logger = molog.getLogger("compiler.parser.codegen")
+            logger = molog.logging.getLogger("compiler.parser.codegen")
             # Output, as not filtered
             logger.error(self.next_message())
             self.assert_log_lines([
@@ -3529,10 +3529,10 @@ class ConfigDictTest(BaseTest):
     def test_config14_ok(self):
         with support.captured_stdout() as output:
             self.apply_config(self.config14)
-            h = molog._handlers['hand1']
+            h = molog.logging._handlers['hand1']
             self.assertEqual(h.foo, 'bar')
             self.assertEqual(h.terminator, '!\n')
-            molog.warning('Exclamation')
+            molog.logging.warning('Exclamation')
             self.assertTrue(output.getvalue().endswith('Exclamation!\n'))
 
     def test_config15_ok(self):
@@ -3557,32 +3557,32 @@ class ConfigDictTest(BaseTest):
             self.apply_config(config)
             self.apply_config(config)
 
-        handler = molog.root.handlers[0]
+        handler = molog.logging.root.handlers[0]
         self.addCleanup(closeFileHandler, handler, fn)
 
     def test_config16_ok(self):
         self.apply_config(self.config16)
-        h = molog._handlers['hand1']
+        h = molog.logging._handlers['hand1']
 
         # Custom value
-        result = h.formatter.format(molog.makeLogRecord(
+        result = h.formatter.format(molog.logging.makeLogRecord(
             {'msg': 'Hello', 'customfield': 'customvalue'}))
         self.assertEqual(result, 'Hello ++ customvalue')
 
         # Default value
-        result = h.formatter.format(molog.makeLogRecord(
+        result = h.formatter.format(molog.logging.makeLogRecord(
             {'msg': 'Hello'}))
         self.assertEqual(result, 'Hello ++ defaultvalue')
 
     def test_config17_ok(self):
         self.apply_config(self.config17)
-        h = molog._handlers['hand1']
+        h = molog.logging._handlers['hand1']
         self.assertEqual(h.formatter.custom_property, 'value')
 
     def test_config18_ok(self):
         self.apply_config(self.config18)
-        handler = molog.getLogger('mymodule').handlers[0]
-        self.assertEqual(handler.flushLevel, molog.ERROR)
+        handler = molog.logging.getLogger('mymodule').handlers[0]
+        self.assertEqual(handler.flushLevel, molog.logging.ERROR)
 
     def setup_via_listener(self, text, verify=None):
         text = text.encode("utf-8")
@@ -3616,16 +3616,16 @@ class ConfigDictTest(BaseTest):
     def test_listen_config_10_ok(self):
         with support.captured_stdout() as output:
             self.setup_via_listener(json.dumps(self.config10))
-            self.check_handler('hand1', molog.StreamHandler)
-            logger = molog.getLogger("compiler.parser")
+            self.check_handler('hand1', molog.logging.StreamHandler)
+            logger = molog.logging.getLogger("compiler.parser")
             logger.warning(self.next_message())
-            logger = molog.getLogger('compiler')
+            logger = molog.logging.getLogger('compiler')
             # Not output, because filtered
             logger.warning(self.next_message())
-            logger = molog.getLogger('compiler.lexer')
+            logger = molog.logging.getLogger('compiler.lexer')
             # Not output, because filtered
             logger.warning(self.next_message())
-            logger = molog.getLogger("compiler.parser.codegen")
+            logger = molog.logging.getLogger("compiler.parser.codegen")
             # Output, as not filtered
             logger.error(self.next_message())
             self.assert_log_lines([
@@ -3637,7 +3637,7 @@ class ConfigDictTest(BaseTest):
     def test_listen_config_1_ok(self):
         with support.captured_stdout() as output:
             self.setup_via_listener(textwrap.dedent(ConfigFileTest.config1))
-            logger = molog.getLogger("compiler.parser")
+            logger = molog.logging.getLogger("compiler.parser")
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -3657,7 +3657,7 @@ class ConfigDictTest(BaseTest):
         def verify_reverse(stuff):
             return stuff[::-1]
 
-        logger = molog.getLogger("compiler.parser")
+        logger = molog.logging.getLogger("compiler.parser")
         to_send = textwrap.dedent(ConfigFileTest.config1)
         # First, specify a verification function that will fail.
         # We expect to see no output, since our configuration
@@ -3679,7 +3679,7 @@ class ConfigDictTest(BaseTest):
 
         with support.captured_stdout() as output:
             self.setup_via_listener(to_send)    # no verify callable specified
-            logger = molog.getLogger("compiler.parser")
+            logger = molog.logging.getLogger("compiler.parser")
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -3697,7 +3697,7 @@ class ConfigDictTest(BaseTest):
 
         with support.captured_stdout() as output:
             self.setup_via_listener(to_send[::-1], verify_reverse)
-            logger = molog.getLogger("compiler.parser")
+            logger = molog.logging.getLogger("compiler.parser")
             # Both will output a message
             logger.info(self.next_message())
             logger.error(self.next_message())
@@ -3719,21 +3719,21 @@ class ConfigDictTest(BaseTest):
         config['formatters']['mySimpleFormatter']['format'] = "${asctime} (${name}) ${levelname}: ${message}"
 
         self.apply_config(config)
-        handler = molog.getLogger('mymodule').handlers[0]
-        self.assertIsInstance(handler.target, molog.Handler)
+        handler = molog.logging.getLogger('mymodule').handlers[0]
+        self.assertIsInstance(handler.target, molog.logging.Handler)
         self.assertIsInstance(handler.formatter._style,
-                              molog.StringTemplateStyle)
-        self.assertEqual(sorted(molog.getHandlerNames()),
+                              molog.logging.StringTemplateStyle)
+        self.assertEqual(sorted(molog.logging.getHandlerNames()),
                          ['bufferGlobal', 'fileGlobal'])
 
     def test_custom_formatter_class_with_validate(self):
         self.apply_config(self.custom_formatter_class_validate)
-        handler = molog.getLogger("my_test_logger_custom_formatter").handlers[0]
+        handler = molog.logging.getLogger("my_test_logger_custom_formatter").handlers[0]
         self.assertIsInstance(handler.formatter, ExceptionFormatter)
 
     def test_custom_formatter_class_with_validate2(self):
         self.apply_config(self.custom_formatter_class_validate2)
-        handler = molog.getLogger("my_test_logger_custom_formatter").handlers[0]
+        handler = molog.logging.getLogger("my_test_logger_custom_formatter").handlers[0]
         self.assertIsInstance(handler.formatter, ExceptionFormatter)
 
     def test_custom_formatter_class_with_validate2_with_wrong_fmt(self):
@@ -3742,7 +3742,7 @@ class ConfigDictTest(BaseTest):
 
         # Exception should not be raised as we have configured 'validate' to False
         self.apply_config(config)
-        handler = molog.getLogger("my_test_logger_custom_formatter").handlers[0]
+        handler = molog.logging.getLogger("my_test_logger_custom_formatter").handlers[0]
         self.assertIsInstance(handler.formatter, ExceptionFormatter)
 
     def test_custom_formatter_class_with_validate3(self):
@@ -3826,7 +3826,7 @@ class ConfigDictTest(BaseTest):
         # see bpo-39142
         from collections import namedtuple
 
-        class MyHandler(molog.StreamHandler):
+        class MyHandler(molog.logging.StreamHandler):
             def __init__(self, resource, *args, **kwargs):
                 super().__init__(*args, **kwargs)
                 self.resource: namedtuple = resource
@@ -3850,7 +3850,7 @@ class ConfigDictTest(BaseTest):
         }
         with support.captured_stderr() as stderr:
             self.apply_config(config)
-            molog.info('some log')
+            molog.logging.info('some log')
         self.assertEqual(stderr.getvalue(), 'some log my_type\n')
 
     def test_config_callable_filter_works(self):
@@ -3859,16 +3859,16 @@ class ConfigDictTest(BaseTest):
         self.apply_config({
             "version": 1, "root": {"level": "DEBUG", "filters": [filter_]}
         })
-        assert molog.getLogger().filters[0] is filter_
-        molog.getLogger().filters = []
+        assert molog.logging.getLogger().filters[0] is filter_
+        molog.logging.getLogger().filters = []
 
     def test_config_filter_works(self):
-        filter_ = molog.Filter("spam.eggs")
+        filter_ = molog.logging.Filter("spam.eggs")
         self.apply_config({
             "version": 1, "root": {"level": "DEBUG", "filters": [filter_]}
         })
-        assert molog.getLogger().filters[0] is filter_
-        molog.getLogger().filters = []
+        assert molog.logging.getLogger().filters[0] is filter_
+        molog.logging.getLogger().filters = []
 
     def test_config_filter_method_works(self):
         class FakeFilter:
@@ -3878,8 +3878,8 @@ class ConfigDictTest(BaseTest):
         self.apply_config({
             "version": 1, "root": {"level": "DEBUG", "filters": [filter_]}
         })
-        assert molog.getLogger().filters[0] is filter_
-        molog.getLogger().filters = []
+        assert molog.logging.getLogger().filters[0] is filter_
+        molog.logging.getLogger().filters = []
 
     def test_invalid_type_raises(self):
         class NotAFilter: pass
@@ -3901,13 +3901,13 @@ class ConfigDictTest(BaseTest):
         qh = None
         try:
             self.apply_config(cd)
-            qh = molog.getHandlerByName('ah')
-            self.assertEqual(sorted(molog.getHandlerNames()), ['ah', 'h1'])
+            qh = molog.logging.getHandlerByName('ah')
+            self.assertEqual(sorted(molog.logging.getHandlerNames()), ['ah', 'h1'])
             self.assertIsNotNone(qh.listener)
             qh.listener.start()
-            molog.debug('foo')
-            molog.info('bar')
-            molog.warning('baz')
+            molog.logging.debug('foo')
+            molog.logging.info('bar')
+            molog.logging.warning('baz')
 
             # Need to let the listener thread finish its work
             while support.sleeping_retry(support.LONG_TIMEOUT,
@@ -3924,7 +3924,7 @@ class ConfigDictTest(BaseTest):
         finally:
             if qh:
                 qh.listener.stop()
-            h = molog.getHandlerByName('h1')
+            h = molog.logging.getHandlerByName('h1')
             if h:
                 self.addCleanup(closeFileHandler, h, fn)
             else:
@@ -4047,7 +4047,7 @@ class ConfigDictTest(BaseTest):
             'root': {'handlers': ['log_to_parent'], 'level': 'DEBUG'}
         })
         # log a message (this creates a record put in the queue)
-        molog.getLogger().info(message_to_log)
+        molog.logging.getLogger().info(message_to_log)
 
     @skip_if_tsan_fork
     @support.requires_subprocess()
@@ -4066,13 +4066,13 @@ class ConfigDictTest(BaseTest):
             qh = None
             try:
                 self.apply_config(cd)
-                qh = molog.getHandlerByName('ah')
-                self.assertEqual(sorted(molog.getHandlerNames()), ['ah', 'h1'])
+                qh = molog.logging.getHandlerByName('ah')
+                self.assertEqual(sorted(molog.logging.getHandlerNames()), ['ah', 'h1'])
                 self.assertIsNotNone(qh.listener)
                 self.assertIs(qh.queue, qspec)
                 self.assertIs(qh.listener.queue, qspec)
             finally:
-                h = molog.getHandlerByName('h1')
+                h = molog.logging.getHandlerByName('h1')
                 if h:
                     self.addCleanup(closeFileHandler, h, fn)
                 else:
@@ -4096,7 +4096,7 @@ class ConfigDictTest(BaseTest):
                 }
             }
         }
-        logger = molog.getLogger('a')
+        logger = molog.logging.getLogger('a')
         self.assertFalse(logger.disabled)
         self.apply_config(config)
         self.assertFalse(logger.disabled)
@@ -4153,7 +4153,7 @@ class ConfigDictTest(BaseTest):
 
         molog.config.dictConfig(config)
 
-        handler = molog.getHandlerByName('custom')
+        handler = molog.logging.getHandlerByName('custom')
         self.assertEqual(handler.custom_kwargs, custom_kwargs)
 
 
@@ -4161,47 +4161,47 @@ class ManagerTest(BaseTest):
     def test_manager_loggerclass(self):
         logged = []
 
-        class MyLogger(molog.Logger):
+        class MyLogger(molog.logging.Logger):
             def _log(self, level, msg, args, exc_info=None, extra=None):
                 logged.append(msg)
 
-        man = molog.Manager(None)
+        man = molog.logging.Manager(None)
         self.assertRaises(TypeError, man.setLoggerClass, int)
         man.setLoggerClass(MyLogger)
         logger = man.getLogger('test')
         logger.warning('should appear in logged')
-        molog.warning('should not appear in logged')
+        molog.logging.warning('should not appear in logged')
 
         self.assertEqual(logged, ['should appear in logged'])
 
     def test_set_log_record_factory(self):
-        man = molog.Manager(None)
+        man = molog.logging.Manager(None)
         expected = object()
         man.setLogRecordFactory(expected)
         self.assertEqual(man.logRecordFactory, expected)
 
 class ChildLoggerTest(BaseTest):
     def test_child_loggers(self):
-        r = molog.getLogger()
-        l1 = molog.getLogger('abc')
-        l2 = molog.getLogger('def.ghi')
+        r = molog.logging.getLogger()
+        l1 = molog.logging.getLogger('abc')
+        l2 = molog.logging.getLogger('def.ghi')
         c1 = r.getChild('xyz')
         c2 = r.getChild('uvw.xyz')
-        self.assertIs(c1, molog.getLogger('xyz'))
-        self.assertIs(c2, molog.getLogger('uvw.xyz'))
+        self.assertIs(c1, molog.logging.getLogger('xyz'))
+        self.assertIs(c2, molog.logging.getLogger('uvw.xyz'))
         c1 = l1.getChild('def')
         c2 = c1.getChild('ghi')
         c3 = l1.getChild('def.ghi')
-        self.assertIs(c1, molog.getLogger('abc.def'))
-        self.assertIs(c2, molog.getLogger('abc.def.ghi'))
+        self.assertIs(c1, molog.logging.getLogger('abc.def'))
+        self.assertIs(c2, molog.logging.getLogger('abc.def.ghi'))
         self.assertIs(c2, c3)
 
     def test_get_children(self):
-        r = molog.getLogger()
-        l1 = molog.getLogger('foo')
-        l2 = molog.getLogger('foo.bar')
-        l3 = molog.getLogger('foo.bar.baz.bozz')
-        l4 = molog.getLogger('bar')
+        r = molog.logging.getLogger()
+        l1 = molog.logging.getLogger('foo')
+        l2 = molog.logging.getLogger('foo.bar')
+        l3 = molog.logging.getLogger('foo.bar.baz.bozz')
+        l4 = molog.logging.getLogger('bar')
         kids = r.getChildren()
         expected = {l1, l4}
         self.assertEqual(expected, kids & expected)  # might be other kids for root
@@ -4211,13 +4211,13 @@ class ChildLoggerTest(BaseTest):
         kids = l2.getChildren()
         self.assertEqual(set(), kids)
 
-class DerivedLogRecord(molog.LogRecord):
+class DerivedLogRecord(molog.logging.LogRecord):
     pass
 
 class LogRecordFactoryTest(BaseTest):
 
     def setUp(self):
-        class CheckingFilter(molog.Filter):
+        class CheckingFilter(molog.logging.Filter):
             def __init__(self, cls):
                 self.cls = cls
 
@@ -4232,17 +4232,17 @@ class LogRecordFactoryTest(BaseTest):
         BaseTest.setUp(self)
         self.filter = CheckingFilter(DerivedLogRecord)
         self.root_logger.addFilter(self.filter)
-        self.orig_factory = molog.getLogRecordFactory()
+        self.orig_factory = molog.logging.getLogRecordFactory()
 
     def tearDown(self):
         self.root_logger.removeFilter(self.filter)
         BaseTest.tearDown(self)
-        molog.setLogRecordFactory(self.orig_factory)
+        molog.logging.setLogRecordFactory(self.orig_factory)
 
     def test_logrecord_class(self):
         self.assertRaises(TypeError, self.root_logger.warning,
                           self.next_message())
-        molog.setLogRecordFactory(DerivedLogRecord)
+        molog.logging.setLogRecordFactory(DerivedLogRecord)
         self.root_logger.error(self.next_message())
         self.assert_log_lines([
            ('root', 'ERROR', '2'),
@@ -4259,9 +4259,9 @@ class QueueHandlerTest(BaseTest):
         self.queue = queue.Queue(-1)
         self.que_hdlr = molog.handlers.QueueHandler(self.queue)
         self.name = 'que'
-        self.que_logger = molog.getLogger('que')
+        self.que_logger = molog.logging.getLogger('que')
         self.que_logger.propagate = False
-        self.que_logger.setLevel(molog.WARNING)
+        self.que_logger.setLevel(molog.logging.WARNING)
         self.que_logger.addHandler(self.que_hdlr)
 
     def tearDown(self):
@@ -4276,17 +4276,17 @@ class QueueHandlerTest(BaseTest):
         msg = self.next_message()
         self.que_logger.warning(msg)
         data = self.queue.get_nowait()
-        self.assertTrue(isinstance(data, molog.LogRecord))
+        self.assertTrue(isinstance(data, molog.logging.LogRecord))
         self.assertEqual(data.name, self.que_logger.name)
         self.assertEqual((data.msg, data.args), (msg, None))
 
     def test_formatting(self):
         msg = self.next_message()
-        levelname = molog.getLevelName(molog.WARNING)
+        levelname = molog.logging.getLevelName(molog.logging.WARNING)
         log_format_str = '{name} -> {levelname}: {message}'
         formatted_msg = log_format_str.format(name=self.name,
                                               levelname=levelname, message=msg)
-        formatter = molog.Formatter(self.log_format)
+        formatter = molog.logging.Formatter(self.log_format)
         self.que_hdlr.setFormatter(formatter)
         self.que_logger.warning(msg)
         log_record = self.queue.get_nowait()
@@ -4306,15 +4306,15 @@ class QueueHandlerTest(BaseTest):
         finally:
             listener.stop()
             listener.stop()  # gh-114706 - ensure no crash if called again
-        self.assertTrue(handler.matches(levelno=molog.WARNING, message='1'))
-        self.assertTrue(handler.matches(levelno=molog.ERROR, message='2'))
-        self.assertTrue(handler.matches(levelno=molog.CRITICAL, message='3'))
+        self.assertTrue(handler.matches(levelno=molog.logging.WARNING, message='1'))
+        self.assertTrue(handler.matches(levelno=molog.logging.ERROR, message='2'))
+        self.assertTrue(handler.matches(levelno=molog.logging.CRITICAL, message='3'))
         handler.close()
 
         # Now test with respect_handler_level set
 
         handler = TestHandler(support.Matcher())
-        handler.setLevel(molog.CRITICAL)
+        handler.setLevel(molog.logging.CRITICAL)
         listener = molog.handlers.QueueListener(self.queue, handler,
                                                   respect_handler_level=True)
         listener.start()
@@ -4324,9 +4324,9 @@ class QueueHandlerTest(BaseTest):
             self.que_logger.critical(self.next_message())
         finally:
             listener.stop()
-        self.assertFalse(handler.matches(levelno=molog.WARNING, message='4'))
-        self.assertFalse(handler.matches(levelno=molog.ERROR, message='5'))
-        self.assertTrue(handler.matches(levelno=molog.CRITICAL, message='6'))
+        self.assertFalse(handler.matches(levelno=molog.logging.WARNING, message='4'))
+        self.assertFalse(handler.matches(levelno=molog.logging.ERROR, message='5'))
+        self.assertTrue(handler.matches(levelno=molog.logging.CRITICAL, message='6'))
         handler.close()
 
     @unittest.skipUnless(hasattr(molog.handlers, 'QueueListener'),
@@ -4379,8 +4379,8 @@ if hasattr(molog.handlers, 'QueueListener'):
             QueueListener. Starts the listener, logs five messages, and stops
             the listener.
             """
-            logger = molog.getLogger('test_logger_with_id_%s' % ident)
-            logger.setLevel(molog.DEBUG)
+            logger = molog.logging.getLogger('test_logger_with_id_%s' % ident)
+            logger.setLevel(molog.logging.DEBUG)
             handler = molog.handlers.QueueHandler(log_queue)
             logger.addHandler(handler)
             listener = molog.handlers.QueueListener(log_queue)
@@ -4446,7 +4446,7 @@ if hasattr(molog.handlers, 'QueueListener'):
                 expected = [[], [molog.handlers.QueueListener._sentinel]]
                 self.assertIn(items, expected,
                               'Found unexpected messages in queue: %s' % (
-                                    [m.msg if isinstance(m, molog.LogRecord)
+                                    [m.msg if isinstance(m, molog.logging.LogRecord)
                                      else m for m in items]))
 
         def test_calls_task_done_after_stop(self):
@@ -4485,7 +4485,7 @@ class FormatterTest(unittest.TestCase, AssertErrorMessage):
     def setUp(self):
         self.common = {
             'name': 'formatter.test',
-            'level': molog.DEBUG,
+            'level': molog.logging.DEBUG,
             'pathname': os.path.join('path', 'to', 'dummy.ext'),
             'lineno': 42,
             'exc_info': None,
@@ -4503,232 +4503,232 @@ class FormatterTest(unittest.TestCase, AssertErrorMessage):
         result = dict(self.common)
         if name is not None:
             result.update(self.variants[name])
-        return molog.makeLogRecord(result)
+        return molog.logging.makeLogRecord(result)
 
     def test_percent(self):
         # Test %-formatting
         r = self.get_record()
-        f = molog.Formatter('${%(message)s}')
+        f = molog.logging.Formatter('${%(message)s}')
         self.assertEqual(f.format(r), '${Message with 2 placeholders}')
-        f = molog.Formatter('%(random)s')
+        f = molog.logging.Formatter('%(random)s')
         self.assertRaises(ValueError, f.format, r)
         self.assertFalse(f.usesTime())
-        f = molog.Formatter('%(asctime)s')
+        f = molog.logging.Formatter('%(asctime)s')
         self.assertTrue(f.usesTime())
-        f = molog.Formatter('%(asctime)-15s')
+        f = molog.logging.Formatter('%(asctime)-15s')
         self.assertTrue(f.usesTime())
-        f = molog.Formatter('%(asctime)#15s')
+        f = molog.logging.Formatter('%(asctime)#15s')
         self.assertTrue(f.usesTime())
 
     def test_braces(self):
         # Test {}-formatting
         r = self.get_record()
-        f = molog.Formatter('$%{message}%$', style='{')
+        f = molog.logging.Formatter('$%{message}%$', style='{')
         self.assertEqual(f.format(r), '$%Message with 2 placeholders%$')
-        f = molog.Formatter('{random}', style='{')
+        f = molog.logging.Formatter('{random}', style='{')
         self.assertRaises(ValueError, f.format, r)
-        f = molog.Formatter("{message}", style='{')
+        f = molog.logging.Formatter("{message}", style='{')
         self.assertFalse(f.usesTime())
-        f = molog.Formatter('{asctime}', style='{')
+        f = molog.logging.Formatter('{asctime}', style='{')
         self.assertTrue(f.usesTime())
-        f = molog.Formatter('{asctime!s:15}', style='{')
+        f = molog.logging.Formatter('{asctime!s:15}', style='{')
         self.assertTrue(f.usesTime())
-        f = molog.Formatter('{asctime:15}', style='{')
+        f = molog.logging.Formatter('{asctime:15}', style='{')
         self.assertTrue(f.usesTime())
 
     def test_dollars(self):
         # Test $-formatting
         r = self.get_record()
-        f = molog.Formatter('${message}', style='$')
+        f = molog.logging.Formatter('${message}', style='$')
         self.assertEqual(f.format(r), 'Message with 2 placeholders')
-        f = molog.Formatter('$message', style='$')
+        f = molog.logging.Formatter('$message', style='$')
         self.assertEqual(f.format(r), 'Message with 2 placeholders')
-        f = molog.Formatter('$$%${message}%$$', style='$')
+        f = molog.logging.Formatter('$$%${message}%$$', style='$')
         self.assertEqual(f.format(r), '$%Message with 2 placeholders%$')
-        f = molog.Formatter('${random}', style='$')
+        f = molog.logging.Formatter('${random}', style='$')
         self.assertRaises(ValueError, f.format, r)
         self.assertFalse(f.usesTime())
-        f = molog.Formatter('${asctime}', style='$')
+        f = molog.logging.Formatter('${asctime}', style='$')
         self.assertTrue(f.usesTime())
-        f = molog.Formatter('$asctime', style='$')
+        f = molog.logging.Formatter('$asctime', style='$')
         self.assertTrue(f.usesTime())
-        f = molog.Formatter('${message}', style='$')
+        f = molog.logging.Formatter('${message}', style='$')
         self.assertFalse(f.usesTime())
-        f = molog.Formatter('${asctime}--', style='$')
+        f = molog.logging.Formatter('${asctime}--', style='$')
         self.assertTrue(f.usesTime())
 
     def test_format_validate(self):
         # Check correct formatting
         # Percentage style
-        f = molog.Formatter("%(levelname)-15s - %(message) 5s - %(process)03d - %(module) - %(asctime)*.3s")
+        f = molog.logging.Formatter("%(levelname)-15s - %(message) 5s - %(process)03d - %(module) - %(asctime)*.3s")
         self.assertEqual(f._fmt, "%(levelname)-15s - %(message) 5s - %(process)03d - %(module) - %(asctime)*.3s")
-        f = molog.Formatter("%(asctime)*s - %(asctime)*.3s - %(process)-34.33o")
+        f = molog.logging.Formatter("%(asctime)*s - %(asctime)*.3s - %(process)-34.33o")
         self.assertEqual(f._fmt, "%(asctime)*s - %(asctime)*.3s - %(process)-34.33o")
-        f = molog.Formatter("%(process)#+027.23X")
+        f = molog.logging.Formatter("%(process)#+027.23X")
         self.assertEqual(f._fmt, "%(process)#+027.23X")
-        f = molog.Formatter("%(foo)#.*g")
+        f = molog.logging.Formatter("%(foo)#.*g")
         self.assertEqual(f._fmt, "%(foo)#.*g")
 
         # StrFormat Style
-        f = molog.Formatter("$%{message}%$ - {asctime!a:15} - {customfield['key']}", style="{")
+        f = molog.logging.Formatter("$%{message}%$ - {asctime!a:15} - {customfield['key']}", style="{")
         self.assertEqual(f._fmt, "$%{message}%$ - {asctime!a:15} - {customfield['key']}")
-        f = molog.Formatter("{process:.2f} - {custom.f:.4f}", style="{")
+        f = molog.logging.Formatter("{process:.2f} - {custom.f:.4f}", style="{")
         self.assertEqual(f._fmt, "{process:.2f} - {custom.f:.4f}")
-        f = molog.Formatter("{customfield!s:#<30}", style="{")
+        f = molog.logging.Formatter("{customfield!s:#<30}", style="{")
         self.assertEqual(f._fmt, "{customfield!s:#<30}")
-        f = molog.Formatter("{message!r}", style="{")
+        f = molog.logging.Formatter("{message!r}", style="{")
         self.assertEqual(f._fmt, "{message!r}")
-        f = molog.Formatter("{message!s}", style="{")
+        f = molog.logging.Formatter("{message!s}", style="{")
         self.assertEqual(f._fmt, "{message!s}")
-        f = molog.Formatter("{message!a}", style="{")
+        f = molog.logging.Formatter("{message!a}", style="{")
         self.assertEqual(f._fmt, "{message!a}")
-        f = molog.Formatter("{process!r:4.2}", style="{")
+        f = molog.logging.Formatter("{process!r:4.2}", style="{")
         self.assertEqual(f._fmt, "{process!r:4.2}")
-        f = molog.Formatter("{process!s:<#30,.12f}- {custom:=+#30,.1d} - {module:^30}", style="{")
+        f = molog.logging.Formatter("{process!s:<#30,.12f}- {custom:=+#30,.1d} - {module:^30}", style="{")
         self.assertEqual(f._fmt, "{process!s:<#30,.12f}- {custom:=+#30,.1d} - {module:^30}")
-        f = molog.Formatter("{process!s:{w},.{p}}", style="{")
+        f = molog.logging.Formatter("{process!s:{w},.{p}}", style="{")
         self.assertEqual(f._fmt, "{process!s:{w},.{p}}")
-        f = molog.Formatter("{foo:12.{p}}", style="{")
+        f = molog.logging.Formatter("{foo:12.{p}}", style="{")
         self.assertEqual(f._fmt, "{foo:12.{p}}")
-        f = molog.Formatter("{foo:{w}.6}", style="{")
+        f = molog.logging.Formatter("{foo:{w}.6}", style="{")
         self.assertEqual(f._fmt, "{foo:{w}.6}")
-        f = molog.Formatter("{foo[0].bar[1].baz}", style="{")
+        f = molog.logging.Formatter("{foo[0].bar[1].baz}", style="{")
         self.assertEqual(f._fmt, "{foo[0].bar[1].baz}")
-        f = molog.Formatter("{foo[k1].bar[k2].baz}", style="{")
+        f = molog.logging.Formatter("{foo[k1].bar[k2].baz}", style="{")
         self.assertEqual(f._fmt, "{foo[k1].bar[k2].baz}")
-        f = molog.Formatter("{12[k1].bar[k2].baz}", style="{")
+        f = molog.logging.Formatter("{12[k1].bar[k2].baz}", style="{")
         self.assertEqual(f._fmt, "{12[k1].bar[k2].baz}")
 
         # Dollar style
-        f = molog.Formatter("${asctime} - $message", style="$")
+        f = molog.logging.Formatter("${asctime} - $message", style="$")
         self.assertEqual(f._fmt, "${asctime} - $message")
-        f = molog.Formatter("$bar $$", style="$")
+        f = molog.logging.Formatter("$bar $$", style="$")
         self.assertEqual(f._fmt, "$bar $$")
-        f = molog.Formatter("$bar $$$$", style="$")
+        f = molog.logging.Formatter("$bar $$$$", style="$")
         self.assertEqual(f._fmt, "$bar $$$$")  # this would print two $($$)
 
         # Testing when ValueError being raised from incorrect format
         # Percentage Style
-        self.assertRaises(ValueError, molog.Formatter, "%(asctime)Z")
-        self.assertRaises(ValueError, molog.Formatter, "%(asctime)b")
-        self.assertRaises(ValueError, molog.Formatter, "%(asctime)*")
-        self.assertRaises(ValueError, molog.Formatter, "%(asctime)*3s")
-        self.assertRaises(ValueError, molog.Formatter, "%(asctime)_")
-        self.assertRaises(ValueError, molog.Formatter, '{asctime}')
-        self.assertRaises(ValueError, molog.Formatter, '${message}')
-        self.assertRaises(ValueError, molog.Formatter, '%(foo)#12.3*f')  # with both * and decimal number as precision
-        self.assertRaises(ValueError, molog.Formatter, '%(foo)0*.8*f')
+        self.assertRaises(ValueError, molog.logging.Formatter, "%(asctime)Z")
+        self.assertRaises(ValueError, molog.logging.Formatter, "%(asctime)b")
+        self.assertRaises(ValueError, molog.logging.Formatter, "%(asctime)*")
+        self.assertRaises(ValueError, molog.logging.Formatter, "%(asctime)*3s")
+        self.assertRaises(ValueError, molog.logging.Formatter, "%(asctime)_")
+        self.assertRaises(ValueError, molog.logging.Formatter, '{asctime}')
+        self.assertRaises(ValueError, molog.logging.Formatter, '${message}')
+        self.assertRaises(ValueError, molog.logging.Formatter, '%(foo)#12.3*f')  # with both * and decimal number as precision
+        self.assertRaises(ValueError, molog.logging.Formatter, '%(foo)0*.8*f')
 
         # StrFormat Style
         # Testing failure for '-' in field name
         self.assert_error_message(
             ValueError,
             "invalid format: invalid field name/expression: 'name-thing'",
-            molog.Formatter, "{name-thing}", style="{"
+            molog.logging.Formatter, "{name-thing}", style="{"
         )
         # Testing failure for style mismatch
         self.assert_error_message(
             ValueError,
             "invalid format: no fields",
-            molog.Formatter, '%(asctime)s', style='{'
+            molog.logging.Formatter, '%(asctime)s', style='{'
         )
         # Testing failure for invalid conversion
         self.assert_error_message(
             ValueError,
             "invalid conversion: 'Z'"
         )
-        self.assertRaises(ValueError, molog.Formatter, '{asctime!s:#30,15f}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{asctime!s:#30,15f}', style='{')
         self.assert_error_message(
             ValueError,
             "invalid format: expected ':' after conversion specifier",
-            molog.Formatter, '{asctime!aa:15}', style='{'
+            molog.logging.Formatter, '{asctime!aa:15}', style='{'
         )
         # Testing failure for invalid spec
         self.assert_error_message(
             ValueError,
             "invalid format: bad specifier: '.2ff'",
-            molog.Formatter, '{process:.2ff}', style='{'
+            molog.logging.Formatter, '{process:.2ff}', style='{'
         )
-        self.assertRaises(ValueError, molog.Formatter, '{process:.2Z}', style='{')
-        self.assertRaises(ValueError, molog.Formatter, '{process!s:<##30,12g}', style='{')
-        self.assertRaises(ValueError, molog.Formatter, '{process!s:<#30#,12g}', style='{')
-        self.assertRaises(ValueError, molog.Formatter, '{process!s:{{w}},{{p}}}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{process:.2Z}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{process!s:<##30,12g}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{process!s:<#30#,12g}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{process!s:{{w}},{{p}}}', style='{')
         # Testing failure for mismatch braces
         self.assert_error_message(
             ValueError,
             "invalid format: expected '}' before end of string",
-            molog.Formatter, '{process', style='{'
+            molog.logging.Formatter, '{process', style='{'
         )
         self.assert_error_message(
             ValueError,
             "invalid format: Single '}' encountered in format string",
-            molog.Formatter, 'process}', style='{'
+            molog.logging.Formatter, 'process}', style='{'
         )
-        self.assertRaises(ValueError, molog.Formatter, '{{foo!r:4.2}', style='{')
-        self.assertRaises(ValueError, molog.Formatter, '{{foo!r:4.2}}', style='{')
-        self.assertRaises(ValueError, molog.Formatter, '{foo/bar}', style='{')
-        self.assertRaises(ValueError, molog.Formatter, '{foo:{{w}}.{{p}}}}', style='{')
-        self.assertRaises(ValueError, molog.Formatter, '{foo!X:{{w}}.{{p}}}', style='{')
-        self.assertRaises(ValueError, molog.Formatter, '{foo!a:random}', style='{')
-        self.assertRaises(ValueError, molog.Formatter, '{foo!a:ran{dom}', style='{')
-        self.assertRaises(ValueError, molog.Formatter, '{foo!a:ran{d}om}', style='{')
-        self.assertRaises(ValueError, molog.Formatter, '{foo.!a:d}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{{foo!r:4.2}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{{foo!r:4.2}}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{foo/bar}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{foo:{{w}}.{{p}}}}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{foo!X:{{w}}.{{p}}}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{foo!a:random}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{foo!a:ran{dom}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{foo!a:ran{d}om}', style='{')
+        self.assertRaises(ValueError, molog.logging.Formatter, '{foo.!a:d}', style='{')
 
         # Dollar style
         # Testing failure for mismatch bare $
         self.assert_error_message(
             ValueError,
             "invalid format: bare \'$\' not allowed",
-            molog.Formatter, '$bar $$$', style='$'
+            molog.logging.Formatter, '$bar $$$', style='$'
         )
         self.assert_error_message(
             ValueError,
             "invalid format: bare \'$\' not allowed",
-            molog.Formatter, 'bar $', style='$'
+            molog.logging.Formatter, 'bar $', style='$'
         )
         self.assert_error_message(
             ValueError,
             "invalid format: bare \'$\' not allowed",
-            molog.Formatter, 'foo $.', style='$'
+            molog.logging.Formatter, 'foo $.', style='$'
         )
         # Testing failure for mismatch style
         self.assert_error_message(
             ValueError,
             "invalid format: no fields",
-            molog.Formatter, '{asctime}', style='$'
+            molog.logging.Formatter, '{asctime}', style='$'
         )
-        self.assertRaises(ValueError, molog.Formatter, '%(asctime)s', style='$')
+        self.assertRaises(ValueError, molog.logging.Formatter, '%(asctime)s', style='$')
 
         # Testing failure for incorrect fields
         self.assert_error_message(
             ValueError,
             "invalid format: no fields",
-            molog.Formatter, 'foo', style='$'
+            molog.logging.Formatter, 'foo', style='$'
         )
-        self.assertRaises(ValueError, molog.Formatter, '${asctime', style='$')
+        self.assertRaises(ValueError, molog.logging.Formatter, '${asctime', style='$')
 
     def test_defaults_parameter(self):
         fmts = ['%(custom)s %(message)s', '{custom} {message}', '$custom $message']
         styles = ['%', '{', '$']
         for fmt, style in zip(fmts, styles):
-            f = molog.Formatter(fmt, style=style, defaults={'custom': 'Default'})
+            f = molog.logging.Formatter(fmt, style=style, defaults={'custom': 'Default'})
             r = self.get_record()
             self.assertEqual(f.format(r), 'Default Message with 2 placeholders')
             r = self.get_record("custom")
             self.assertEqual(f.format(r), '1234 Message with 2 placeholders')
 
             # Without default
-            f = molog.Formatter(fmt, style=style)
+            f = molog.logging.Formatter(fmt, style=style)
             r = self.get_record()
             self.assertRaises(ValueError, f.format, r)
 
             # Non-existing default is ignored
-            f = molog.Formatter(fmt, style=style, defaults={'Non-existing': 'Default'})
+            f = molog.logging.Formatter(fmt, style=style, defaults={'Non-existing': 'Default'})
             r = self.get_record("custom")
             self.assertEqual(f.format(r), '1234 Message with 2 placeholders')
 
     def test_invalid_style(self):
-        self.assertRaises(ValueError, molog.Formatter, None, None, 'x')
+        self.assertRaises(ValueError, molog.logging.Formatter, None, None, 'x')
 
     def test_time(self):
         r = self.get_record()
@@ -4737,7 +4737,7 @@ class FormatterTest(unittest.TestCase, AssertErrorMessage):
         # We're essentially converting a UTC time to local time
         r.created = time.mktime(dt.astimezone(None).timetuple())
         r.msecs = 123
-        f = molog.Formatter('%(asctime)s %(message)s')
+        f = molog.logging.Formatter('%(asctime)s %(message)s')
         f.converter = time.gmtime
         self.assertEqual(f.formatTime(r), '1993-04-21 08:03:00,123')
         self.assertEqual(f.formatTime(r, '%Y:%d'), '1993:21')
@@ -4745,7 +4745,7 @@ class FormatterTest(unittest.TestCase, AssertErrorMessage):
         self.assertEqual(r.asctime, '1993-04-21 08:03:00,123')
 
     def test_default_msec_format_none(self):
-        class NoMsecFormatter(molog.Formatter):
+        class NoMsecFormatter(molog.logging.Formatter):
             default_msec_format = None
             default_time_format = '%d/%m/%Y %H:%M:%S'
 
@@ -4757,10 +4757,10 @@ class FormatterTest(unittest.TestCase, AssertErrorMessage):
         self.assertEqual(f.formatTime(r), '21/04/1993 08:03:00')
 
     def test_issue_89047(self):
-        f = molog.Formatter(fmt='{asctime}.{msecs:03.0f} {message}', style='{', datefmt="%Y-%m-%d %H:%M:%S")
+        f = molog.logging.Formatter(fmt='{asctime}.{msecs:03.0f} {message}', style='{', datefmt="%Y-%m-%d %H:%M:%S")
         for i in range(2500):
             time.sleep(0.0004)
-            r = molog.makeLogRecord({'msg': 'Message %d' % (i + 1)})
+            r = molog.logging.makeLogRecord({'msg': 'Message %d' % (i + 1)})
             s = f.format(r)
             self.assertNotIn('.1000', s)
 
@@ -4777,7 +4777,7 @@ class FormatterTest(unittest.TestCase, AssertErrorMessage):
         for ns, want in tests:
             with patch('time.time_ns') as patched_ns:
                 patched_ns.return_value = ns
-                record = molog.makeLogRecord({'msg': 'test'})
+                record = molog.logging.makeLogRecord({'msg': 'test'})
             with self.subTest(ns):
                 self.assertEqual(record.msecs, want)
                 self.assertEqual(record.created, ns / 1e9)
@@ -4836,7 +4836,7 @@ class FormatterTest(unittest.TestCase, AssertErrorMessage):
                 self.assertAlmostEqual(relativeCreated, offset_ns / 1e6, places=7)
 
 
-class TestBufferingFormatter(molog.BufferingFormatter):
+class TestBufferingFormatter(molog.logging.BufferingFormatter):
     __test__ = False
 
     def formatHeader(self, records):
@@ -4848,19 +4848,19 @@ class TestBufferingFormatter(molog.BufferingFormatter):
 class BufferingFormatterTest(unittest.TestCase):
     def setUp(self):
         self.records = [
-            molog.makeLogRecord({'msg': 'one'}),
-            molog.makeLogRecord({'msg': 'two'}),
+            molog.logging.makeLogRecord({'msg': 'one'}),
+            molog.logging.makeLogRecord({'msg': 'two'}),
         ]
 
     def test_default(self):
-        f = molog.BufferingFormatter()
+        f = molog.logging.BufferingFormatter()
         self.assertEqual('', f.format([]))
         self.assertEqual('onetwo', f.format(self.records))
 
     def test_custom(self):
         f = TestBufferingFormatter()
         self.assertEqual('[(2)onetwo(2)]', f.format(self.records))
-        lf = molog.Formatter('<%(message)s>')
+        lf = molog.logging.Formatter('<%(message)s>')
         f = TestBufferingFormatter(lf)
         self.assertEqual('[(2)<one><two>(2)]', f.format(self.records))
 
@@ -4872,18 +4872,14 @@ class ExceptionTest(BaseTest):
         try:
             raise RuntimeError('deliberate mistake')
         except:
-            molog.exception('failed', stack_info=True)
+            molog.logging.exception('failed', stack_info=True)
         r.removeHandler(h)
         h.close()
         r = h.records[0]
-        self.assertTrue(r.exc_text.startswith('Traceback (most recent '
-                                              'call last):\n'))
-        self.assertTrue(r.exc_text.endswith('\nRuntimeError: '
-                                            'deliberate mistake'))
-        self.assertTrue(r.stack_info.startswith('Stack (most recent '
-                                              'call last):\n'))
-        self.assertTrue(r.stack_info.endswith('molog.exception(\'failed\', '
-                                            'stack_info=True)'))
+        self.assertTrue(r.exc_text.startswith('Traceback (most recent call last):\n'))
+        self.assertTrue(r.exc_text.endswith('\nRuntimeError: deliberate mistake'))
+        self.assertTrue(r.stack_info.startswith('Stack (most recent call last):\n'))
+        self.assertTrue(r.stack_info.endswith("molog.logging.exception('failed', stack_info=True)"))
 
 
 class LastResortTest(BaseTest):
@@ -4891,8 +4887,8 @@ class LastResortTest(BaseTest):
         # Test the last resort handler
         root = self.root_logger
         root.removeHandler(self.root_hdlr)
-        old_lastresort = molog.lastResort
-        old_raise_exceptions = molog.raiseExceptions
+        old_lastresort = molog.logging.lastResort
+        old_raise_exceptions = molog.logging.raiseExceptions
 
         try:
             with support.captured_stderr() as stderr:
@@ -4902,7 +4898,7 @@ class LastResortTest(BaseTest):
                 self.assertEqual(stderr.getvalue(), 'Final chance!\n')
 
             # No handlers and no last resort, so 'No handlers' message
-            molog.lastResort = None
+            molog.logging.lastResort = None
             with support.captured_stderr() as stderr:
                 root.warning('Final chance!')
                 msg = 'No handlers could be found for logger "root"\n'
@@ -4915,14 +4911,14 @@ class LastResortTest(BaseTest):
 
             # If raiseExceptions is False, no message is printed
             root.manager.emittedNoHandlerWarning = False
-            molog.raiseExceptions = False
+            molog.logging.raiseExceptions = False
             with support.captured_stderr() as stderr:
                 root.warning('Final chance!')
                 self.assertEqual(stderr.getvalue(), '')
         finally:
             root.addHandler(self.root_hdlr)
-            molog.lastResort = old_lastresort
-            molog.raiseExceptions = old_raise_exceptions
+            molog.logging.lastResort = old_lastresort
+            molog.logging.raiseExceptions = old_raise_exceptions
 
 
 class FakeHandler:
@@ -4937,7 +4933,7 @@ class FakeHandler:
         return inner
 
 
-class RecordingHandler(molog.NullHandler):
+class RecordingHandler(molog.logging.NullHandler):
 
     def __init__(self, *args, **kwargs):
         super(RecordingHandler, self).__init__(*args, **kwargs)
@@ -4956,8 +4952,8 @@ class ShutdownTest(BaseTest):
         super(ShutdownTest, self).setUp()
         self.called = []
 
-        raise_exceptions = molog.raiseExceptions
-        self.addCleanup(setattr, molog, 'raiseExceptions', raise_exceptions)
+        raise_exceptions = molog.logging.raiseExceptions
+        self.addCleanup(setattr, molog.logging, 'raiseExceptions', raise_exceptions)
 
     def raise_error(self, error):
         def inner():
@@ -4971,9 +4967,9 @@ class ShutdownTest(BaseTest):
         handler2 = FakeHandler(2, self.called)
 
         # create live weakref to those handlers
-        handlers = map(molog.weakref.ref, [handler0, handler1, handler2])
+        handlers = map(molog.logging.weakref.ref, [handler0, handler1, handler2])
 
-        molog.shutdown(handlerList=list(handlers))
+        molog.logging.shutdown(handlerList=list(handlers))
 
         expected = ['2 - acquire', '2 - flush', '2 - close', '2 - release',
                     '1 - acquire', '1 - flush', '1 - close', '1 - release',
@@ -4983,9 +4979,9 @@ class ShutdownTest(BaseTest):
     def _test_with_failure_in_method(self, method, error):
         handler = FakeHandler(0, self.called)
         setattr(handler, method, self.raise_error(error))
-        handlers = [molog.weakref.ref(handler)]
+        handlers = [molog.logging.weakref.ref(handler)]
 
-        molog.shutdown(handlerList=list(handlers))
+        molog.logging.shutdown(handlerList=list(handlers))
 
         self.assertEqual('0 - release', self.called[-1])
 
@@ -5008,29 +5004,29 @@ class ShutdownTest(BaseTest):
         self._test_with_failure_in_method('close', ValueError)
 
     def test_with_other_error_in_acquire_without_raise(self):
-        molog.raiseExceptions = False
+        molog.logging.raiseExceptions = False
         self._test_with_failure_in_method('acquire', IndexError)
 
     def test_with_other_error_in_flush_without_raise(self):
-        molog.raiseExceptions = False
+        molog.logging.raiseExceptions = False
         self._test_with_failure_in_method('flush', IndexError)
 
     def test_with_other_error_in_close_without_raise(self):
-        molog.raiseExceptions = False
+        molog.logging.raiseExceptions = False
         self._test_with_failure_in_method('close', IndexError)
 
     def test_with_other_error_in_acquire_with_raise(self):
-        molog.raiseExceptions = True
+        molog.logging.raiseExceptions = True
         self.assertRaises(IndexError, self._test_with_failure_in_method,
                           'acquire', IndexError)
 
     def test_with_other_error_in_flush_with_raise(self):
-        molog.raiseExceptions = True
+        molog.logging.raiseExceptions = True
         self.assertRaises(IndexError, self._test_with_failure_in_method,
                           'flush', IndexError)
 
     def test_with_other_error_in_close_with_raise(self):
-        molog.raiseExceptions = True
+        molog.logging.raiseExceptions = True
         self.assertRaises(IndexError, self._test_with_failure_in_method,
                           'close', IndexError)
 
@@ -5040,37 +5036,37 @@ class ModuleLevelMiscTest(BaseTest):
     """Test suite for some module level methods."""
 
     def test_disable(self):
-        old_disable = molog.root.manager.disable
+        old_disable = molog.logging.root.manager.disable
         # confirm our assumptions are correct
         self.assertEqual(old_disable, 0)
-        self.addCleanup(molog.disable, old_disable)
+        self.addCleanup(molog.logging.disable, old_disable)
 
-        molog.disable(83)
-        self.assertEqual(molog.root.manager.disable, 83)
+        molog.logging.disable(83)
+        self.assertEqual(molog.logging.root.manager.disable, 83)
 
-        self.assertRaises(ValueError, molog.disable, "doesnotexists")
+        self.assertRaises(ValueError, molog.logging.disable, "doesnotexists")
 
         class _NotAnIntOrString:
             pass
 
-        self.assertRaises(TypeError, molog.disable, _NotAnIntOrString())
+        self.assertRaises(TypeError, molog.logging.disable, _NotAnIntOrString())
 
-        molog.disable("WARN")
+        molog.logging.disable("WARN")
 
         # test the default value introduced in 3.7
         # (Issue #28524)
-        molog.disable()
-        self.assertEqual(molog.root.manager.disable, molog.CRITICAL)
+        molog.logging.disable()
+        self.assertEqual(molog.logging.root.manager.disable, molog.logging.CRITICAL)
 
     def _test_log(self, method, level=None):
         called = []
-        support.patch(self, molog, 'basicConfig',
+        support.patch(self, molog.logging, 'basicConfig',
                       lambda *a, **kw: called.append((a, kw)))
 
         recording = RecordingHandler()
-        molog.root.addHandler(recording)
+        molog.logging.root.addHandler(recording)
 
-        log_method = getattr(molog, method)
+        log_method = getattr(molog.logging, method)
         if level is not None:
             log_method(level, "test me: %r", recording)
         else:
@@ -5080,14 +5076,14 @@ class ModuleLevelMiscTest(BaseTest):
         record = recording.records[0]
         self.assertEqual(record.getMessage(), "test me: %r" % recording)
 
-        expected_level = level if level is not None else getattr(molog, method.upper())
+        expected_level = level if level is not None else getattr(molog.logging, method.upper())
         self.assertEqual(record.levelno, expected_level)
 
         # basicConfig was not called!
         self.assertEqual(called, [])
 
     def test_log(self):
-        self._test_log('log', molog.ERROR)
+        self._test_log('log', molog.logging.ERROR)
 
     def test_debug(self):
         self._test_log('debug')
@@ -5105,47 +5101,47 @@ class ModuleLevelMiscTest(BaseTest):
         self._test_log('critical')
 
     def test_set_logger_class(self):
-        self.assertRaises(TypeError, molog.setLoggerClass, object)
+        self.assertRaises(TypeError, molog.logging.setLoggerClass, object)
 
-        class MyLogger(molog.Logger):
+        class MyLogger(molog.logging.Logger):
             pass
 
-        molog.setLoggerClass(MyLogger)
-        self.assertEqual(molog.getLoggerClass(), MyLogger)
+        molog.logging.setLoggerClass(MyLogger)
+        self.assertEqual(molog.logging.getLoggerClass(), MyLogger)
 
-        molog.setLoggerClass(molog.Logger)
-        self.assertEqual(molog.getLoggerClass(), molog.Logger)
+        molog.logging.setLoggerClass(molog.logging.Logger)
+        self.assertEqual(molog.logging.getLoggerClass(), molog.logging.Logger)
 
     def test_subclass_logger_cache(self):
         # bpo-37258
         message = []
 
-        class MyLogger(molog.getLoggerClass()):
-            def __init__(self, name='MyLogger', level=molog.NOTSET):
+        class MyLogger(molog.logging.getLoggerClass()):
+            def __init__(self, name='MyLogger', level=molog.logging.NOTSET):
                 super().__init__(name, level)
                 message.append('initialized')
 
-        molog.setLoggerClass(MyLogger)
-        logger = molog.getLogger('just_some_logger')
+        molog.logging.setLoggerClass(MyLogger)
+        logger = molog.logging.getLogger('just_some_logger')
         self.assertEqual(message, ['initialized'])
         stream = io.StringIO()
-        h = molog.StreamHandler(stream)
+        h = molog.logging.StreamHandler(stream)
         logger.addHandler(h)
         try:
-            logger.setLevel(molog.DEBUG)
+            logger.setLevel(molog.logging.DEBUG)
             logger.debug("hello")
             self.assertEqual(stream.getvalue().strip(), "hello")
 
             stream.truncate(0)
             stream.seek(0)
 
-            logger.setLevel(molog.INFO)
+            logger.setLevel(molog.logging.INFO)
             logger.debug("hello")
             self.assertEqual(stream.getvalue(), "")
         finally:
             logger.removeHandler(h)
             h.close()
-            molog.setLoggerClass(molog.Logger)
+            molog.logging.setLoggerClass(molog.logging.Logger)
 
     def test_logging_at_shutdown(self):
         # bpo-20037: Doing text I/O late at interpreter shutdown must not crash
@@ -5214,27 +5210,27 @@ class ModuleLevelMiscTest(BaseTest):
         self.assertEqual(rc, 1)
 
     def test_get_level_names_mapping(self):
-        mapping = molog.getLevelNamesMapping()
-        self.assertEqual(molog._nameToLevel, mapping)  # value is equivalent
-        self.assertIsNot(molog._nameToLevel, mapping)  # but not the internal data
-        new_mapping = molog.getLevelNamesMapping()     # another call -> another copy
+        mapping = molog.logging.getLevelNamesMapping()
+        self.assertEqual(molog.logging._nameToLevel, mapping)  # value is equivalent
+        self.assertIsNot(molog.logging._nameToLevel, mapping)  # but not the internal data
+        new_mapping = molog.logging.getLevelNamesMapping()     # another call -> another copy
         self.assertIsNot(mapping, new_mapping)           # verify not the same object as before
         self.assertEqual(mapping, new_mapping)           # but equivalent in value
 
 
 class LogRecordTest(BaseTest):
     def test_str_rep(self):
-        r = molog.makeLogRecord({})
+        r = molog.logging.makeLogRecord({})
         s = str(r)
         self.assertTrue(s.startswith('<LogRecord: '))
         self.assertTrue(s.endswith('>'))
 
     def test_dict_arg(self):
         h = RecordingHandler()
-        r = molog.getLogger()
+        r = molog.logging.getLogger()
         r.addHandler(h)
         d = {'less' : 'more' }
-        molog.warning('less is %(less)s', d)
+        molog.logging.warning('less is %(less)s', d)
         self.assertIs(h.records[0].args, d)
         self.assertEqual(h.records[0].message, 'less is more')
         r.removeHandler(h)
@@ -5242,24 +5238,24 @@ class LogRecordTest(BaseTest):
 
     @staticmethod # pickled as target of child process in the following test
     def _extract_logrecord_process_name(key, logMultiprocessing, conn=None):
-        prev_logMultiprocessing = molog.logMultiprocessing
-        molog.logMultiprocessing = logMultiprocessing
+        prev_logMultiprocessing = molog.logging.logMultiprocessing
+        molog.logging.logMultiprocessing = logMultiprocessing
         try:
             import multiprocessing as mp
             name = mp.current_process().name
 
-            r1 = molog.makeLogRecord({'msg': f'msg1_{key}'})
+            r1 = molog.logging.makeLogRecord({'msg': f'msg1_{key}'})
 
             # https://bugs.python.org/issue45128
             with support.swap_item(sys.modules, 'multiprocessing', None):
-                r2 = molog.makeLogRecord({'msg': f'msg2_{key}'})
+                r2 = molog.logging.makeLogRecord({'msg': f'msg2_{key}'})
 
             results = {'processName'  : name,
                        'r1.processName': r1.processName,
                        'r2.processName': r2.processName,
                       }
         finally:
-            molog.logMultiprocessing = prev_logMultiprocessing
+            molog.logging.logMultiprocessing = prev_logMultiprocessing
         if conn:
             conn.send(results)
         else:
@@ -5271,12 +5267,12 @@ class LogRecordTest(BaseTest):
         multiprocessing_imported = 'multiprocessing' in sys.modules
         try:
             # logMultiprocessing is True by default
-            self.assertEqual(molog.logMultiprocessing, True)
+            self.assertEqual(molog.logging.logMultiprocessing, True)
 
             LOG_MULTI_PROCESSING = True
             # When logMultiprocessing == True:
             # In the main process processName = 'MainProcess'
-            r = molog.makeLogRecord({})
+            r = molog.logging.makeLogRecord({})
             self.assertEqual(r.processName, 'MainProcess')
 
             results = self._extract_logrecord_process_name(1, LOG_MULTI_PROCESSING)
@@ -5307,22 +5303,22 @@ class LogRecordTest(BaseTest):
         NONE = self.assertIsNone
         NOT_NONE = self.assertIsNotNone
 
-        r = molog.makeLogRecord({})
+        r = molog.logging.makeLogRecord({})
         NOT_NONE(r.thread)
         NOT_NONE(r.threadName)
         NOT_NONE(r.process)
         NOT_NONE(r.processName)
         NONE(r.taskName)
-        log_threads = molog.logThreads
-        log_processes = molog.logProcesses
-        log_multiprocessing = molog.logMultiprocessing
-        log_asyncio_tasks = molog.logAsyncioTasks
+        log_threads = molog.logging.logThreads
+        log_processes = molog.logging.logProcesses
+        log_multiprocessing = molog.logging.logMultiprocessing
+        log_asyncio_tasks = molog.logging.logAsyncioTasks
         try:
-            molog.logThreads = False
-            molog.logProcesses = False
-            molog.logMultiprocessing = False
-            molog.logAsyncioTasks = False
-            r = molog.makeLogRecord({})
+            molog.logging.logThreads = False
+            molog.logging.logProcesses = False
+            molog.logging.logMultiprocessing = False
+            molog.logging.logAsyncioTasks = False
+            r = molog.logging.makeLogRecord({})
 
             NONE(r.thread)
             NONE(r.threadName)
@@ -5330,13 +5326,13 @@ class LogRecordTest(BaseTest):
             NONE(r.processName)
             NONE(r.taskName)
         finally:
-            molog.logThreads = log_threads
-            molog.logProcesses = log_processes
-            molog.logMultiprocessing = log_multiprocessing
-            molog.logAsyncioTasks = log_asyncio_tasks
+            molog.logging.logThreads = log_threads
+            molog.logging.logProcesses = log_processes
+            molog.logging.logMultiprocessing = log_multiprocessing
+            molog.logging.logAsyncioTasks = log_asyncio_tasks
 
     async def _make_record_async(self, assertion):
-        r = molog.makeLogRecord({})
+        r = molog.logging.makeLogRecord({})
         assertion(r.taskName)
 
     @support.requires_working_socket()
@@ -5344,9 +5340,9 @@ class LogRecordTest(BaseTest):
         try:
             make_record = self._make_record_async
             with asyncio.Runner() as runner:
-                molog.logAsyncioTasks = True
+                molog.logging.logAsyncioTasks = True
                 runner.run(make_record(self.assertIsNotNone))
-                molog.logAsyncioTasks = False
+                molog.logging.logAsyncioTasks = False
                 runner.run(make_record(self.assertIsNone))
         finally:
             asyncio.set_event_loop_policy(None)
@@ -5356,9 +5352,9 @@ class LogRecordTest(BaseTest):
         try:
             make_record = self._make_record_async
             with asyncio.Runner() as runner, support.swap_item(sys.modules, 'asyncio', None):
-                molog.logAsyncioTasks = True
+                molog.logging.logAsyncioTasks = True
                 runner.run(make_record(self.assertIsNone))
-                molog.logAsyncioTasks = False
+                molog.logging.logAsyncioTasks = False
                 runner.run(make_record(self.assertIsNone))
         finally:
             asyncio.set_event_loop_policy(None)
@@ -5370,58 +5366,58 @@ class BasicConfigTest(unittest.TestCase):
 
     def setUp(self):
         super(BasicConfigTest, self).setUp()
-        self.handlers = molog.root.handlers
-        self.saved_handlers = molog._handlers.copy()
-        self.saved_handler_list = molog._handlerList[:]
-        self.original_logging_level = molog.root.level
+        self.handlers = molog.logging.root.handlers
+        self.saved_handlers = molog.logging._handlers.copy()
+        self.saved_handler_list = molog.logging._handlerList[:]
+        self.original_logging_level = molog.logging.root.level
         self.addCleanup(self.cleanup)
-        molog.root.handlers = []
+        molog.logging.root.handlers = []
 
     def tearDown(self):
-        for h in molog.root.handlers[:]:
-            molog.root.removeHandler(h)
+        for h in molog.logging.root.handlers[:]:
+            molog.logging.root.removeHandler(h)
             h.close()
         super(BasicConfigTest, self).tearDown()
 
     def cleanup(self):
-        setattr(molog.root, 'handlers', self.handlers)
-        molog._handlers.clear()
-        molog._handlers.update(self.saved_handlers)
-        molog._handlerList[:] = self.saved_handler_list
-        molog.root.setLevel(self.original_logging_level)
+        setattr(molog.logging.root, 'handlers', self.handlers)
+        molog.logging._handlers.clear()
+        molog.logging._handlers.update(self.saved_handlers)
+        molog.logging._handlerList[:] = self.saved_handler_list
+        molog.logging.root.setLevel(self.original_logging_level)
 
     def test_no_kwargs(self):
-        molog.basicConfig()
+        molog.logging.basicConfig()
 
         # handler defaults to a StreamHandler to sys.stderr
-        self.assertEqual(len(molog.root.handlers), 1)
-        handler = molog.root.handlers[0]
-        self.assertIsInstance(handler, molog.StreamHandler)
+        self.assertEqual(len(molog.logging.root.handlers), 1)
+        handler = molog.logging.root.handlers[0]
+        self.assertIsInstance(handler, molog.logging.StreamHandler)
         self.assertEqual(handler.stream, sys.stderr)
 
         formatter = handler.formatter
         # format defaults to logging.BASIC_FORMAT
-        self.assertEqual(formatter._style._fmt, molog.BASIC_FORMAT)
+        self.assertEqual(formatter._style._fmt, molog.logging.BASIC_FORMAT)
         # datefmt defaults to None
         self.assertIsNone(formatter.datefmt)
         # style defaults to %
-        self.assertIsInstance(formatter._style, molog.PercentStyle)
+        self.assertIsInstance(formatter._style, molog.logging.PercentStyle)
 
         # level is not explicitly set
-        self.assertEqual(molog.root.level, self.original_logging_level)
+        self.assertEqual(molog.logging.root.level, self.original_logging_level)
 
     def test_strformatstyle(self):
         with support.captured_stdout() as output:
-            molog.basicConfig(stream=sys.stdout, style="{")
-            molog.error("Log an error")
+            molog.logging.basicConfig(stream=sys.stdout, style="{")
+            molog.logging.error("Log an error")
             sys.stdout.seek(0)
             self.assertEqual(output.getvalue().strip(),
                 "ERROR:root:Log an error")
 
     def test_stringtemplatestyle(self):
         with support.captured_stdout() as output:
-            molog.basicConfig(stream=sys.stdout, style="$")
-            molog.error("Log an error")
+            molog.logging.basicConfig(stream=sys.stdout, style="$")
+            molog.logging.error("Log an error")
             sys.stdout.seek(0)
             self.assertEqual(output.getvalue().strip(),
                 "ERROR:root:Log an error")
@@ -5433,13 +5429,13 @@ class BasicConfigTest(unittest.TestCase):
             h2.close()
             os.remove(fn)
 
-        molog.basicConfig(filename='test.log', encoding='utf-8')
+        molog.logging.basicConfig(filename='test.log', encoding='utf-8')
 
-        self.assertEqual(len(molog.root.handlers), 1)
-        handler = molog.root.handlers[0]
-        self.assertIsInstance(handler, molog.FileHandler)
+        self.assertEqual(len(molog.logging.root.handlers), 1)
+        handler = molog.logging.root.handlers[0]
+        self.assertIsInstance(handler, molog.logging.FileHandler)
 
-        expected = molog.FileHandler('test.log', 'a', encoding='utf-8')
+        expected = molog.logging.FileHandler('test.log', 'a', encoding='utf-8')
         self.assertEqual(handler.stream.mode, expected.stream.mode)
         self.assertEqual(handler.stream.name, expected.stream.name)
         self.addCleanup(cleanup, handler, expected, 'test.log')
@@ -5451,78 +5447,78 @@ class BasicConfigTest(unittest.TestCase):
             h2.close()
             os.remove(fn)
 
-        molog.basicConfig(filename='test.log', filemode='wb')
+        molog.logging.basicConfig(filename='test.log', filemode='wb')
 
-        handler = molog.root.handlers[0]
-        expected = molog.FileHandler('test.log', 'wb')
+        handler = molog.logging.root.handlers[0]
+        expected = molog.logging.FileHandler('test.log', 'wb')
         self.assertEqual(handler.stream.mode, expected.stream.mode)
         self.addCleanup(cleanup, handler, expected, 'test.log')
 
     def test_stream(self):
         stream = io.StringIO()
         self.addCleanup(stream.close)
-        molog.basicConfig(stream=stream)
+        molog.logging.basicConfig(stream=stream)
 
-        self.assertEqual(len(molog.root.handlers), 1)
-        handler = molog.root.handlers[0]
-        self.assertIsInstance(handler, molog.StreamHandler)
+        self.assertEqual(len(molog.logging.root.handlers), 1)
+        handler = molog.logging.root.handlers[0]
+        self.assertIsInstance(handler, molog.logging.StreamHandler)
         self.assertEqual(handler.stream, stream)
 
     def test_format(self):
-        molog.basicConfig(format='%(asctime)s - %(message)s')
+        molog.logging.basicConfig(format='%(asctime)s - %(message)s')
 
-        formatter = molog.root.handlers[0].formatter
+        formatter = molog.logging.root.handlers[0].formatter
         self.assertEqual(formatter._style._fmt, '%(asctime)s - %(message)s')
 
     def test_datefmt(self):
-        molog.basicConfig(datefmt='bar')
+        molog.logging.basicConfig(datefmt='bar')
 
-        formatter = molog.root.handlers[0].formatter
+        formatter = molog.logging.root.handlers[0].formatter
         self.assertEqual(formatter.datefmt, 'bar')
 
     def test_style(self):
-        molog.basicConfig(style='$')
+        molog.logging.basicConfig(style='$')
 
-        formatter = molog.root.handlers[0].formatter
-        self.assertIsInstance(formatter._style, molog.StringTemplateStyle)
+        formatter = molog.logging.root.handlers[0].formatter
+        self.assertIsInstance(formatter._style, molog.logging.StringTemplateStyle)
 
     def test_level(self):
-        old_level = molog.root.level
-        self.addCleanup(molog.root.setLevel, old_level)
+        old_level = molog.logging.root.level
+        self.addCleanup(molog.logging.root.setLevel, old_level)
 
-        molog.basicConfig(level=57)
-        self.assertEqual(molog.root.level, 57)
+        molog.logging.basicConfig(level=57)
+        self.assertEqual(molog.logging.root.level, 57)
         # Test that second call has no effect
-        molog.basicConfig(level=58)
-        self.assertEqual(molog.root.level, 57)
+        molog.logging.basicConfig(level=58)
+        self.assertEqual(molog.logging.root.level, 57)
 
     def test_incompatible(self):
         assertRaises = self.assertRaises
-        handlers = [molog.StreamHandler()]
+        handlers = [molog.logging.StreamHandler()]
         stream = sys.stderr
-        assertRaises(ValueError, molog.basicConfig, filename='test.log',
+        assertRaises(ValueError, molog.logging.basicConfig, filename='test.log',
                                                       stream=stream)
-        assertRaises(ValueError, molog.basicConfig, filename='test.log',
+        assertRaises(ValueError, molog.logging.basicConfig, filename='test.log',
                                                       handlers=handlers)
-        assertRaises(ValueError, molog.basicConfig, stream=stream,
+        assertRaises(ValueError, molog.logging.basicConfig, stream=stream,
                                                       handlers=handlers)
         # Issue 23207: test for invalid kwargs
-        assertRaises(ValueError, molog.basicConfig, loglevel=molog.INFO)
+        assertRaises(ValueError, molog.logging.basicConfig, loglevel=molog.logging.INFO)
         # Should pop both filename and filemode even if filename is None
-        molog.basicConfig(filename=None, filemode='a')
+        molog.logging.basicConfig(filename=None, filemode='a')
 
     def test_handlers(self):
         handlers = [
-            molog.StreamHandler(),
-            molog.StreamHandler(sys.stdout),
-            molog.StreamHandler(),
+            molog.logging.StreamHandler(),
+            molog.logging.StreamHandler(sys.stdout),
+            molog.logging.StreamHandler(),
         ]
-        f = molog.Formatter()
+        f = molog.logging.Formatter()
         handlers[2].setFormatter(f)
-        molog.basicConfig(handlers=handlers)
-        self.assertIs(handlers[0], molog.root.handlers[0])
-        self.assertIs(handlers[1], molog.root.handlers[1])
-        self.assertIs(handlers[2], molog.root.handlers[2])
+        molog.logging.basicConfig(handlers=handlers)
+        self.assertIs(handlers[0], molog.logging.root.handlers[0])
+        self.assertIs(handlers[1], molog.logging.root.handlers[1])
+        self.assertIs(handlers[2], molog.logging.root.handlers[2])
         self.assertIsNotNone(handlers[0].formatter)
         self.assertIsNotNone(handlers[1].formatter)
         self.assertIs(handlers[2].formatter, f)
@@ -5531,19 +5527,19 @@ class BasicConfigTest(unittest.TestCase):
     def test_force(self):
         old_string_io = io.StringIO()
         new_string_io = io.StringIO()
-        old_handlers = [molog.StreamHandler(old_string_io)]
-        new_handlers = [molog.StreamHandler(new_string_io)]
-        molog.basicConfig(level=molog.WARNING, handlers=old_handlers)
-        molog.warning('warn')
-        molog.info('info')
-        molog.debug('debug')
-        self.assertEqual(len(molog.root.handlers), 1)
-        molog.basicConfig(level=molog.INFO, handlers=new_handlers,
+        old_handlers = [molog.logging.StreamHandler(old_string_io)]
+        new_handlers = [molog.logging.StreamHandler(new_string_io)]
+        molog.logging.basicConfig(level=molog.logging.WARNING, handlers=old_handlers)
+        molog.logging.warning('warn')
+        molog.logging.info('info')
+        molog.logging.debug('debug')
+        self.assertEqual(len(molog.logging.root.handlers), 1)
+        molog.logging.basicConfig(level=molog.logging.INFO, handlers=new_handlers,
                             force=True)
-        molog.warning('warn')
-        molog.info('info')
-        molog.debug('debug')
-        self.assertEqual(len(molog.root.handlers), 1)
+        molog.logging.warning('warn')
+        molog.logging.info('info')
+        molog.logging.debug('debug')
+        self.assertEqual(len(molog.logging.root.handlers), 1)
         self.assertEqual(old_string_io.getvalue().strip(),
                          'WARNING:root:warn')
         self.assertEqual(new_string_io.getvalue().strip(),
@@ -5552,15 +5548,15 @@ class BasicConfigTest(unittest.TestCase):
     def test_encoding(self):
         try:
             encoding = 'utf-8'
-            molog.basicConfig(filename='test.log', encoding=encoding,
+            molog.logging.basicConfig(filename='test.log', encoding=encoding,
                                 errors='strict',
-                                format='%(message)s', level=molog.DEBUG)
+                                format='%(message)s', level=molog.logging.DEBUG)
 
-            self.assertEqual(len(molog.root.handlers), 1)
-            handler = molog.root.handlers[0]
-            self.assertIsInstance(handler, molog.FileHandler)
+            self.assertEqual(len(molog.logging.root.handlers), 1)
+            handler = molog.logging.root.handlers[0]
+            self.assertIsInstance(handler, molog.logging.FileHandler)
             self.assertEqual(handler.encoding, encoding)
-            molog.debug('The Øresund Bridge joins Copenhagen to Malmö')
+            molog.logging.debug('The Øresund Bridge joins Copenhagen to Malmö')
         finally:
             handler.close()
             with open('test.log', encoding='utf-8') as f:
@@ -5572,15 +5568,15 @@ class BasicConfigTest(unittest.TestCase):
     def test_encoding_errors(self):
         try:
             encoding = 'ascii'
-            molog.basicConfig(filename='test.log', encoding=encoding,
+            molog.logging.basicConfig(filename='test.log', encoding=encoding,
                                 errors='ignore',
-                                format='%(message)s', level=molog.DEBUG)
+                                format='%(message)s', level=molog.logging.DEBUG)
 
-            self.assertEqual(len(molog.root.handlers), 1)
-            handler = molog.root.handlers[0]
-            self.assertIsInstance(handler, molog.FileHandler)
+            self.assertEqual(len(molog.logging.root.handlers), 1)
+            handler = molog.logging.root.handlers[0]
+            self.assertIsInstance(handler, molog.logging.FileHandler)
             self.assertEqual(handler.encoding, encoding)
-            molog.debug('The Øresund Bridge joins Copenhagen to Malmö')
+            molog.logging.debug('The Øresund Bridge joins Copenhagen to Malmö')
         finally:
             handler.close()
             with open('test.log', encoding='utf-8') as f:
@@ -5591,15 +5587,15 @@ class BasicConfigTest(unittest.TestCase):
     def test_encoding_errors_default(self):
         try:
             encoding = 'ascii'
-            molog.basicConfig(filename='test.log', encoding=encoding,
-                                format='%(message)s', level=molog.DEBUG)
+            molog.logging.basicConfig(filename='test.log', encoding=encoding,
+                                format='%(message)s', level=molog.logging.DEBUG)
 
-            self.assertEqual(len(molog.root.handlers), 1)
-            handler = molog.root.handlers[0]
-            self.assertIsInstance(handler, molog.FileHandler)
+            self.assertEqual(len(molog.logging.root.handlers), 1)
+            handler = molog.logging.root.handlers[0]
+            self.assertIsInstance(handler, molog.logging.FileHandler)
             self.assertEqual(handler.encoding, encoding)
             self.assertEqual(handler.errors, 'backslashreplace')
-            molog.debug('😂: ☃️: The Øresund Bridge joins Copenhagen to Malmö')
+            molog.logging.debug('😂: ☃️: The Øresund Bridge joins Copenhagen to Malmö')
         finally:
             handler.close()
             with open('test.log', encoding='utf-8') as f:
@@ -5612,13 +5608,13 @@ class BasicConfigTest(unittest.TestCase):
         # Specifying None should behave as 'strict'
         try:
             encoding = 'ascii'
-            molog.basicConfig(filename='test.log', encoding=encoding,
+            molog.logging.basicConfig(filename='test.log', encoding=encoding,
                                 errors=None,
-                                format='%(message)s', level=molog.DEBUG)
+                                format='%(message)s', level=molog.logging.DEBUG)
 
-            self.assertEqual(len(molog.root.handlers), 1)
-            handler = molog.root.handlers[0]
-            self.assertIsInstance(handler, molog.FileHandler)
+            self.assertEqual(len(molog.logging.root.handlers), 1)
+            handler = molog.logging.root.handlers[0]
+            self.assertIsInstance(handler, molog.logging.FileHandler)
             self.assertEqual(handler.encoding, encoding)
             self.assertIsNone(handler.errors)
 
@@ -5628,7 +5624,7 @@ class BasicConfigTest(unittest.TestCase):
                 message.append(str(sys.exception()))
 
             handler.handleError = dummy_handle_error
-            molog.debug('The Øresund Bridge joins Copenhagen to Malmö')
+            molog.logging.debug('The Øresund Bridge joins Copenhagen to Malmö')
             self.assertTrue(message)
             self.assertIn("'ascii' codec can't encode "
                           "character '\\xd8' in position 4:", message[0])
@@ -5643,23 +5639,23 @@ class BasicConfigTest(unittest.TestCase):
     @support.requires_working_socket()
     def test_log_taskName(self):
         async def log_record():
-            molog.warning('hello world')
+            molog.logging.warning('hello world')
 
         handler = None
         log_filename = make_temp_file('.log', 'test-logging-taskname-')
         self.addCleanup(os.remove, log_filename)
         try:
             encoding = 'utf-8'
-            molog.basicConfig(filename=log_filename, errors='strict',
-                                encoding=encoding, level=molog.WARNING,
+            molog.logging.basicConfig(filename=log_filename, errors='strict',
+                                encoding=encoding, level=molog.logging.WARNING,
                                 format='%(taskName)s - %(message)s')
 
-            self.assertEqual(len(molog.root.handlers), 1)
-            handler = molog.root.handlers[0]
-            self.assertIsInstance(handler, molog.FileHandler)
+            self.assertEqual(len(molog.logging.root.handlers), 1)
+            handler = molog.logging.root.handlers[0]
+            self.assertIsInstance(handler, molog.logging.FileHandler)
 
             with asyncio.Runner(debug=True) as runner:
-                molog.logAsyncioTasks = True
+                molog.logging.logAsyncioTasks = True
                 runner.run(log_record())
             with open(log_filename, encoding='utf-8') as f:
                 data = f.read().strip()
@@ -5674,17 +5670,17 @@ class BasicConfigTest(unittest.TestCase):
         # logging.root has no handlers so basicConfig should be called
         called = []
 
-        old_basic_config = molog.basicConfig
+        old_basic_config = molog.logging.basicConfig
         def my_basic_config(*a, **kw):
             old_basic_config()
-            old_level = molog.root.level
-            molog.root.setLevel(100)  # avoid having messages in stderr
-            self.addCleanup(molog.root.setLevel, old_level)
+            old_level = molog.logging.root.level
+            molog.logging.root.setLevel(100)  # avoid having messages in stderr
+            self.addCleanup(molog.logging.root.setLevel, old_level)
             called.append((a, kw))
 
-        support.patch(self, molog, 'basicConfig', my_basic_config)
+        support.patch(self, molog.logging, 'basicConfig', my_basic_config)
 
-        log_method = getattr(molog, method)
+        log_method = getattr(molog.logging, method)
         if level is not None:
             log_method(level, "test me")
         else:
@@ -5694,7 +5690,7 @@ class BasicConfigTest(unittest.TestCase):
         self.assertEqual(called, [((), {})])
 
     def test_log(self):
-        self._test_log('log', molog.WARNING)
+        self._test_log('log', molog.logging.WARNING)
 
     def test_debug(self):
         self._test_log('debug')
@@ -5715,20 +5711,20 @@ class BasicConfigTest(unittest.TestCase):
 class LoggerAdapterTest(unittest.TestCase):
     def setUp(self):
         super(LoggerAdapterTest, self).setUp()
-        old_handler_list = molog._handlerList[:]
+        old_handler_list = molog.logging._handlerList[:]
 
         self.recording = RecordingHandler()
-        self.logger = molog.root
+        self.logger = molog.logging.root
         self.logger.addHandler(self.recording)
         self.addCleanup(self.logger.removeHandler, self.recording)
         self.addCleanup(self.recording.close)
 
         def cleanup():
-            molog._handlerList[:] = old_handler_list
+            molog.logging._handlerList[:] = old_handler_list
 
         self.addCleanup(cleanup)
-        self.addCleanup(molog.shutdown)
-        self.adapter = molog.LoggerAdapter(logger=self.logger, extra=None)
+        self.addCleanup(molog.logging.shutdown)
+        self.adapter = molog.logging.LoggerAdapter(logger=self.logger, extra=None)
 
     def test_exception(self):
         msg = 'testing exception: %r'
@@ -5741,7 +5737,7 @@ class LoggerAdapterTest(unittest.TestCase):
 
         self.assertEqual(len(self.recording.records), 1)
         record = self.recording.records[0]
-        self.assertEqual(record.levelno, molog.ERROR)
+        self.assertEqual(record.levelno, molog.logging.ERROR)
         self.assertEqual(record.msg, msg)
         self.assertEqual(record.args, (self.recording,))
         self.assertEqual(record.exc_info,
@@ -5766,7 +5762,7 @@ class LoggerAdapterTest(unittest.TestCase):
 
         self.assertEqual(len(self.recording.records), 1)
         record = self.recording.records[0]
-        self.assertEqual(record.levelno, molog.CRITICAL)
+        self.assertEqual(record.levelno, molog.logging.CRITICAL)
         self.assertEqual(record.msg, msg)
         self.assertEqual(record.args, (self.recording,))
         self.assertEqual(record.funcName, 'test_critical')
@@ -5793,10 +5789,10 @@ class LoggerAdapterTest(unittest.TestCase):
         adapter_adapter = PrefixAdapter(logger=adapter, extra=None)
         adapter_adapter.prefix = 'AdapterAdapter'
         self.assertEqual(repr(adapter), repr(adapter_adapter))
-        adapter_adapter.log(molog.CRITICAL, msg, self.recording)
+        adapter_adapter.log(molog.logging.CRITICAL, msg, self.recording)
         self.assertEqual(len(self.recording.records), 1)
         record = self.recording.records[0]
-        self.assertEqual(record.levelno, molog.CRITICAL)
+        self.assertEqual(record.levelno, molog.logging.CRITICAL)
         self.assertEqual(record.msg, f"Adapter AdapterAdapter {msg}")
         self.assertEqual(record.args, (self.recording,))
         self.assertEqual(record.funcName, 'test_nested')
@@ -5822,7 +5818,7 @@ class LoggerAdapterTest(unittest.TestCase):
         adapter.warning('Hello, {}!', 'world')
         self.assertEqual(str(records[-1].msg), 'Hello, world!')
         self.assertEqual(records[-1].funcName, 'test_styled_adapter')
-        adapter.log(molog.WARNING, 'Goodbye {}.', 'world')
+        adapter.log(molog.logging.WARNING, 'Goodbye {}.', 'world')
         self.assertEqual(str(records[-1].msg), 'Goodbye world.')
         self.assertEqual(records[-1].funcName, 'test_styled_adapter')
 
@@ -5834,7 +5830,7 @@ class LoggerAdapterTest(unittest.TestCase):
         adapter2.warning('Hello, {}!', 'world')
         self.assertEqual(str(records[-1].msg), '{} Hello, world!')
         self.assertEqual(records[-1].funcName, 'test_nested_styled_adapter')
-        adapter2.log(molog.WARNING, 'Goodbye {}.', 'world')
+        adapter2.log(molog.logging.WARNING, 'Goodbye {}.', 'world')
         self.assertEqual(str(records[-1].msg), '{} Goodbye world.')
         self.assertEqual(records[-1].funcName, 'test_nested_styled_adapter')
 
@@ -5871,7 +5867,7 @@ class LoggerAdapterTest(unittest.TestCase):
         self.assertGreater(records[-1].lineno, lineno)
 
     def test_extra_in_records(self):
-        self.adapter = molog.LoggerAdapter(logger=self.logger,
+        self.adapter = molog.logging.LoggerAdapter(logger=self.logger,
                                              extra={'foo': '1'})
 
         self.adapter.critical('foo should be here')
@@ -5887,7 +5883,7 @@ class LoggerAdapterTest(unittest.TestCase):
         self.assertFalse(hasattr(record, 'foo'))
 
     def test_extra_merged(self):
-        self.adapter = molog.LoggerAdapter(logger=self.logger,
+        self.adapter = molog.logging.LoggerAdapter(logger=self.logger,
                                              extra={'foo': '1'},
                                              merge_extra=True)
 
@@ -5900,7 +5896,7 @@ class LoggerAdapterTest(unittest.TestCase):
         self.assertEqual(record.bar, '2')
 
     def test_extra_merged_log_call_has_precedence(self):
-        self.adapter = molog.LoggerAdapter(logger=self.logger,
+        self.adapter = molog.logging.LoggerAdapter(logger=self.logger,
                                              extra={'foo': '1'},
                                              merge_extra=True)
 
@@ -5911,7 +5907,7 @@ class LoggerAdapterTest(unittest.TestCase):
         self.assertEqual(record.foo, '2')
 
 
-class PrefixAdapter(molog.LoggerAdapter):
+class PrefixAdapter(molog.logging.LoggerAdapter):
     prefix = 'Adapter'
 
     def process(self, msg, kwargs):
@@ -5927,7 +5923,7 @@ class Message:
         return self.fmt.format(*self.args)
 
 
-class StyleAdapter(molog.LoggerAdapter):
+class StyleAdapter(molog.logging.LoggerAdapter):
     def log(self, level, msg, /, *args, stacklevel=1, **kwargs):
         if self.isEnabledFor(level):
             msg, kwargs = self.process(msg, kwargs)
@@ -5940,11 +5936,11 @@ class LoggerTest(BaseTest, AssertErrorMessage):
     def setUp(self):
         super(LoggerTest, self).setUp()
         self.recording = RecordingHandler()
-        self.logger = molog.Logger(name='blah')
+        self.logger = molog.logging.Logger(name='blah')
         self.logger.addHandler(self.recording)
         self.addCleanup(self.logger.removeHandler, self.recording)
         self.addCleanup(self.recording.close)
-        self.addCleanup(molog.shutdown)
+        self.addCleanup(molog.logging.shutdown)
 
     def test_set_invalid_level(self):
         self.assert_error_message(
@@ -5965,23 +5961,23 @@ class LoggerTest(BaseTest, AssertErrorMessage):
 
         self.assertEqual(len(self.recording.records), 1)
         record = self.recording.records[0]
-        self.assertEqual(record.levelno, molog.ERROR)
+        self.assertEqual(record.levelno, molog.logging.ERROR)
         self.assertEqual(record.msg, msg)
         self.assertEqual(record.args, (self.recording,))
         self.assertEqual(record.exc_info,
                          (exc.__class__, exc, exc.__traceback__))
 
     def test_log_invalid_level_with_raise(self):
-        with support.swap_attr(molog, 'raiseExceptions', True):
+        with support.swap_attr(molog.logging, 'raiseExceptions', True):
             self.assertRaises(TypeError, self.logger.log, '10', 'test message')
 
     def test_log_invalid_level_no_raise(self):
-        with support.swap_attr(molog, 'raiseExceptions', False):
+        with support.swap_attr(molog.logging, 'raiseExceptions', False):
             self.logger.log('10', 'test message')  # no exception happens
 
     def test_find_caller_with_stack_info(self):
         called = []
-        support.patch(self, molog.traceback, 'print_stack',
+        support.patch(self, molog.logging.traceback, 'print_stack',
                       lambda f, file: called.append(file.getvalue()))
 
         self.logger.findCaller(stack_info=True)
@@ -6016,9 +6012,9 @@ class LoggerTest(BaseTest, AssertErrorMessage):
         self.assertEqual(records[-1].funcName, 'outer')
         self.assertGreater(records[-1].lineno, lineno)
         lineno = records[-1].lineno
-        root_logger = molog.getLogger()
+        root_logger = molog.logging.getLogger()
         root_logger.addHandler(self.recording)
-        trigger = molog.warning
+        trigger = molog.logging.warning
         outer()
         self.assertEqual(records[-1].funcName, 'outer')
         root_logger.removeHandler(self.recording)
@@ -6032,7 +6028,7 @@ class LoggerTest(BaseTest, AssertErrorMessage):
         name = 'my record'
         level = 13
         fn = lno = msg = args = exc_info = func = sinfo = None
-        rv = molog._logRecordFactory(name, level, fn, lno, msg, args,
+        rv = molog.logging._logRecordFactory(name, level, fn, lno, msg, args,
                                        exc_info, func, sinfo)
 
         for key in ('message', 'asctime') + tuple(rv.__dict__.keys()):
@@ -6058,7 +6054,7 @@ class LoggerTest(BaseTest, AssertErrorMessage):
         self.assertFalse(self.logger.hasHandlers())
 
     def test_has_handlers_no_propagate(self):
-        child_logger = molog.getLogger('blah.child')
+        child_logger = molog.logging.getLogger('blah.child')
         child_logger.propagate = False
         self.assertFalse(child_logger.hasHandlers())
 
@@ -6081,85 +6077,85 @@ class LoggerTest(BaseTest, AssertErrorMessage):
         self.assertFalse(self.logger.isEnabledFor(22))
 
     def test_root_logger_aliases(self):
-        root = molog.getLogger()
-        self.assertIs(root, molog.root)
-        self.assertIs(root, molog.getLogger(None))
-        self.assertIs(root, molog.getLogger(''))
-        self.assertIs(root, molog.getLogger('root'))
-        self.assertIs(root, molog.getLogger('foo').root)
-        self.assertIs(root, molog.getLogger('foo.bar').root)
-        self.assertIs(root, molog.getLogger('foo').parent)
+        root = molog.logging.getLogger()
+        self.assertIs(root, molog.logging.root)
+        self.assertIs(root, molog.logging.getLogger(None))
+        self.assertIs(root, molog.logging.getLogger(''))
+        self.assertIs(root, molog.logging.getLogger('root'))
+        self.assertIs(root, molog.logging.getLogger('foo').root)
+        self.assertIs(root, molog.logging.getLogger('foo.bar').root)
+        self.assertIs(root, molog.logging.getLogger('foo').parent)
 
-        self.assertIsNot(root, molog.getLogger('\0'))
-        self.assertIsNot(root, molog.getLogger('foo.bar').parent)
+        self.assertIsNot(root, molog.logging.getLogger('\0'))
+        self.assertIsNot(root, molog.logging.getLogger('foo.bar').parent)
 
     def test_invalid_names(self):
-        self.assertRaises(TypeError, molog.getLogger, any)
-        self.assertRaises(TypeError, molog.getLogger, b'foo')
+        self.assertRaises(TypeError, molog.logging.getLogger, any)
+        self.assertRaises(TypeError, molog.logging.getLogger, b'foo')
 
     def test_pickling(self):
         for proto in range(pickle.HIGHEST_PROTOCOL + 1):
             for name in ('', 'root', 'foo', 'foo.bar', 'baz.bar'):
-                logger = molog.getLogger(name)
+                logger = molog.logging.getLogger(name)
                 s = pickle.dumps(logger, proto)
                 unpickled = pickle.loads(s)
                 self.assertIs(unpickled, logger)
 
     def test_caching(self):
         root = self.root_logger
-        logger1 = molog.getLogger("abc")
-        logger2 = molog.getLogger("abc.def")
+        logger1 = molog.logging.getLogger("abc")
+        logger2 = molog.logging.getLogger("abc.def")
 
         # Set root logger level and ensure cache is empty
-        root.setLevel(molog.ERROR)
-        self.assertEqual(logger2.getEffectiveLevel(), molog.ERROR)
+        root.setLevel(molog.logging.ERROR)
+        self.assertEqual(logger2.getEffectiveLevel(), molog.logging.ERROR)
         self.assertEqual(logger2._cache, {})
 
         # Ensure cache is populated and calls are consistent
-        self.assertTrue(logger2.isEnabledFor(molog.ERROR))
-        self.assertFalse(logger2.isEnabledFor(molog.DEBUG))
-        self.assertEqual(logger2._cache, {molog.ERROR: True, molog.DEBUG: False})
+        self.assertTrue(logger2.isEnabledFor(molog.logging.ERROR))
+        self.assertFalse(logger2.isEnabledFor(molog.logging.DEBUG))
+        self.assertEqual(logger2._cache, {molog.logging.ERROR: True, molog.logging.DEBUG: False})
         self.assertEqual(root._cache, {})
-        self.assertTrue(logger2.isEnabledFor(molog.ERROR))
+        self.assertTrue(logger2.isEnabledFor(molog.logging.ERROR))
 
         # Ensure root cache gets populated
         self.assertEqual(root._cache, {})
-        self.assertTrue(root.isEnabledFor(molog.ERROR))
-        self.assertEqual(root._cache, {molog.ERROR: True})
+        self.assertTrue(root.isEnabledFor(molog.logging.ERROR))
+        self.assertEqual(root._cache, {molog.logging.ERROR: True})
 
         # Set parent logger level and ensure caches are emptied
-        logger1.setLevel(molog.CRITICAL)
-        self.assertEqual(logger2.getEffectiveLevel(), molog.CRITICAL)
+        logger1.setLevel(molog.logging.CRITICAL)
+        self.assertEqual(logger2.getEffectiveLevel(), molog.logging.CRITICAL)
         self.assertEqual(logger2._cache, {})
 
         # Ensure logger2 uses parent logger's effective level
-        self.assertFalse(logger2.isEnabledFor(molog.ERROR))
+        self.assertFalse(logger2.isEnabledFor(molog.logging.ERROR))
 
         # Set level to NOTSET and ensure caches are empty
-        logger2.setLevel(molog.NOTSET)
-        self.assertEqual(logger2.getEffectiveLevel(), molog.CRITICAL)
+        logger2.setLevel(molog.logging.NOTSET)
+        self.assertEqual(logger2.getEffectiveLevel(), molog.logging.CRITICAL)
         self.assertEqual(logger2._cache, {})
         self.assertEqual(logger1._cache, {})
         self.assertEqual(root._cache, {})
 
         # Verify logger2 follows parent and not root
-        self.assertFalse(logger2.isEnabledFor(molog.ERROR))
-        self.assertTrue(logger2.isEnabledFor(molog.CRITICAL))
-        self.assertFalse(logger1.isEnabledFor(molog.ERROR))
-        self.assertTrue(logger1.isEnabledFor(molog.CRITICAL))
-        self.assertTrue(root.isEnabledFor(molog.ERROR))
+        self.assertFalse(logger2.isEnabledFor(molog.logging.ERROR))
+        self.assertTrue(logger2.isEnabledFor(molog.logging.CRITICAL))
+        self.assertFalse(logger1.isEnabledFor(molog.logging.ERROR))
+        self.assertTrue(logger1.isEnabledFor(molog.logging.CRITICAL))
+        self.assertTrue(root.isEnabledFor(molog.logging.ERROR))
 
         # Disable logging in manager and ensure caches are clear
-        molog.disable()
-        self.assertEqual(logger2.getEffectiveLevel(), molog.CRITICAL)
+        molog.logging.disable()
+        self.assertEqual(logger2.getEffectiveLevel(), molog.logging.CRITICAL)
         self.assertEqual(logger2._cache, {})
         self.assertEqual(logger1._cache, {})
         self.assertEqual(root._cache, {})
 
         # Ensure no loggers are enabled
-        self.assertFalse(logger1.isEnabledFor(molog.CRITICAL))
-        self.assertFalse(logger2.isEnabledFor(molog.CRITICAL))
-        self.assertFalse(root.isEnabledFor(molog.CRITICAL))
+        self.assertFalse(logger1.isEnabledFor(molog.logging.CRITICAL))
+        self.assertFalse(logger2.isEnabledFor(molog.logging.CRITICAL))
+        self.assertFalse(root.isEnabledFor(molog.logging.CRITICAL))
 
 
 class BaseFileTest(BaseTest):
@@ -6184,16 +6180,16 @@ class BaseFileTest(BaseTest):
         self.rmfiles.append(filename)
 
     def next_rec(self):
-        return molog.LogRecord('n', molog.DEBUG, 'p', 1,
+        return molog.logging.LogRecord('n', molog.logging.DEBUG, 'p', 1,
                                  self.next_message(), None, None, None)
 
 class FileHandlerTest(BaseFileTest):
     def test_delay(self):
         os.unlink(self.fn)
-        fh = molog.FileHandler(self.fn, encoding='utf-8', delay=True)
+        fh = molog.logging.FileHandler(self.fn, encoding='utf-8', delay=True)
         self.assertIsNone(fh.stream)
         self.assertFalse(os.path.exists(self.fn))
-        fh.handle(molog.makeLogRecord({}))
+        fh.handle(molog.logging.makeLogRecord({}))
         self.assertIsNotNone(fh.stream)
         self.assertTrue(os.path.exists(self.fn))
         fh.close()
@@ -6201,8 +6197,8 @@ class FileHandlerTest(BaseFileTest):
     def test_emit_after_closing_in_write_mode(self):
         # Issue #42378
         os.unlink(self.fn)
-        fh = molog.FileHandler(self.fn, encoding='utf-8', mode='w')
-        fh.setFormatter(molog.Formatter('%(message)s'))
+        fh = molog.logging.FileHandler(self.fn, encoding='utf-8', mode='w')
+        fh.setFormatter(molog.logging.Formatter('%(message)s'))
         fh.emit(self.next_rec())    # '1'
         fh.close()
         fh.emit(self.next_rec())    # '2'
@@ -6262,8 +6258,8 @@ class RotatingFileHandlerTest(BaseFileTest):
         rh = molog.handlers.RotatingFileHandler(
             self.fn, encoding="utf-8", backupCount=2, maxBytes=100, **kwargs)
         self.assertIs(os.path.exists(self.fn), not delay)
-        small = molog.makeLogRecord({'msg': 'a'})
-        large = molog.makeLogRecord({'msg': 'b'*100})
+        small = molog.logging.makeLogRecord({'msg': 'a'})
+        large = molog.logging.makeLogRecord({'msg': 'b'*100})
         self.assertFalse(rh.shouldRollover(small))
         self.assertFalse(rh.shouldRollover(large))
         rh.emit(small)
@@ -6372,7 +6368,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
         fh = molog.handlers.TimedRotatingFileHandler(
                 os.devnull, 'S', encoding="utf-8", backupCount=1)
         time.sleep(1.1)    # a little over a second ...
-        r = molog.makeLogRecord({'msg': 'testing - device file'})
+        r = molog.logging.makeLogRecord({'msg': 'testing - device file'})
         self.assertFalse(fh.shouldRollover(r))
         fh.close()
 
@@ -6380,13 +6376,13 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
     def test_rollover(self):
         fh = molog.handlers.TimedRotatingFileHandler(
                 self.fn, 'S', encoding="utf-8", backupCount=1)
-        fmt = molog.Formatter('%(asctime)s %(message)s')
+        fmt = molog.logging.Formatter('%(asctime)s %(message)s')
         fh.setFormatter(fmt)
-        r1 = molog.makeLogRecord({'msg': 'testing - initial'})
+        r1 = molog.logging.makeLogRecord({'msg': 'testing - initial'})
         fh.emit(r1)
         self.assertLogFile(self.fn)
         time.sleep(1.1)    # a little over a second ...
-        r2 = molog.makeLogRecord({'msg': 'testing - after delay'})
+        r2 = molog.logging.makeLogRecord({'msg': 'testing - after delay'})
         fh.emit(r2)
         fh.close()
         # At this point, we should have a recent rotated file which we
@@ -6430,13 +6426,13 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
             now = datetime.datetime.now()
             atTime = now.time()
         atTime = atTime.replace(microsecond=0)
-        fmt = molog.Formatter('%(asctime)s %(message)s')
+        fmt = molog.logging.Formatter('%(asctime)s %(message)s')
         when = f'W{now.weekday()}' if weekly else 'MIDNIGHT'
         for i in range(3):
             fh = molog.handlers.TimedRotatingFileHandler(
                 self.fn, encoding="utf-8", when=when, atTime=atTime)
             fh.setFormatter(fmt)
-            r2 = molog.makeLogRecord({'msg': f'testing1 {i}'})
+            r2 = molog.logging.makeLogRecord({'msg': f'testing1 {i}'})
             fh.emit(r2)
             fh.close()
         self.assertLogFile(self.fn)
@@ -6449,7 +6445,7 @@ class TimedRotatingFileHandlerTest(BaseFileTest):
             fh = molog.handlers.TimedRotatingFileHandler(
                 self.fn, encoding="utf-8", when=when, atTime=atTime)
             fh.setFormatter(fmt)
-            r2 = molog.makeLogRecord({'msg': f'testing2 {i}'})
+            r2 = molog.logging.makeLogRecord({'msg': f'testing2 {i}'})
             fh.emit(r2)
             fh.close()
         rolloverDate = now - datetime.timedelta(days=7 if weekly else 1)
@@ -7106,7 +7102,7 @@ class NTEventLogHandlerTest(BaseTest):
                 raise unittest.SkipTest('Insufficient privileges to run test')
             raise
 
-        r = molog.makeLogRecord({'msg': 'Test Log Message'})
+        r = molog.logging.makeLogRecord({'msg': 'Test Log Message'})
         h.handle(r)
         h.close()
         # Now see if the event is recorded
@@ -7135,7 +7131,7 @@ class MiscTestCase(unittest.TestCase):
             'PercentStyle', 'StrFormatStyle', 'StringTemplateStyle',
             'Filterer', 'PlaceHolder', 'Manager', 'RootLogger', 'root',
             'threading', 'logAsyncioTasks'}
-        support.check__all__(self, molog, not_exported=not_exported)
+        support.check__all__(self, molog.logging, not_exported=not_exported)
 
 
 # Set the locale to the platform-dependent default.  I have no idea

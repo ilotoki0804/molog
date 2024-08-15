@@ -12,7 +12,7 @@ import struct
 import threading
 import time
 
-import molog
+from . import logging
 
 #
 # Some constants...
@@ -28,7 +28,7 @@ SYSLOG_TCP_PORT = 514
 _MIDNIGHT = 24 * 60 * 60  # number of seconds in a day
 
 
-class BaseRotatingHandler(molog.FileHandler):
+class BaseRotatingHandler(logging.FileHandler):
     """
     Base class for handlers that rotate log files at a certain point.
     Not meant to be instantiated directly.  Instead, use RotatingFileHandler
@@ -41,7 +41,7 @@ class BaseRotatingHandler(molog.FileHandler):
         """
         Use the specified filename for streamed logging
         """
-        molog.FileHandler.__init__(self, filename, mode=mode,
+        logging.FileHandler.__init__(self, filename, mode=mode,
                                      encoding=encoding, delay=delay,
                                      errors=errors)
         self.mode = mode
@@ -58,7 +58,7 @@ class BaseRotatingHandler(molog.FileHandler):
         try:
             if self.shouldRollover(record):
                 self.doRollover()
-            molog.FileHandler.emit(self, record)
+            logging.FileHandler.emit(self, record)
         except Exception:
             self.handleError(record)
 
@@ -423,7 +423,7 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
         self.rolloverAt = self.computeRollover(currentTime)
 
 
-class WatchedFileHandler(molog.FileHandler):
+class WatchedFileHandler(logging.FileHandler):
     """
     A handler for logging to a file, which watches the file
     to see if it has changed while in use. This can happen because of
@@ -446,7 +446,7 @@ class WatchedFileHandler(molog.FileHandler):
                  errors=None):
         if "b" not in mode:
             encoding = io.text_encoding(encoding)
-        molog.FileHandler.__init__(self, filename, mode=mode,
+        logging.FileHandler.__init__(self, filename, mode=mode,
                                      encoding=encoding, delay=delay,
                                      errors=errors)
         self.dev, self.ino = -1, -1
@@ -503,10 +503,10 @@ class WatchedFileHandler(molog.FileHandler):
         record to it.
         """
         self.reopenIfNeeded()
-        molog.FileHandler.emit(self, record)
+        logging.FileHandler.emit(self, record)
 
 
-class SocketHandler(molog.Handler):
+class SocketHandler(logging.Handler):
     """
     A handler class which writes logging records, in pickle format, to
     a streaming socket. The socket is kept open across logging calls.
@@ -527,7 +527,7 @@ class SocketHandler(molog.Handler):
         occurs, the socket is silently closed and then reopened on the next
         logging call.
         """
-        molog.Handler.__init__(self)
+        logging.Handler.__init__(self)
         self.host = host
         self.port = port
         if port is None:
@@ -639,7 +639,7 @@ class SocketHandler(molog.Handler):
             self.sock.close()
             self.sock = None        # try to reconnect next time
         else:
-            molog.Handler.handleError(self, record)
+            logging.Handler.handleError(self, record)
 
     def emit(self, record):
         """
@@ -665,7 +665,7 @@ class SocketHandler(molog.Handler):
             if sock:
                 self.sock = None
                 sock.close()
-            molog.Handler.close(self)
+            logging.Handler.close(self)
 
 
 class DatagramHandler(SocketHandler):
@@ -708,7 +708,7 @@ class DatagramHandler(SocketHandler):
         self.sock.sendto(s, self.address)
 
 
-class SysLogHandler(molog.Handler):
+class SysLogHandler(logging.Handler):
     """
     A handler class which sends formatted logging records to a syslog
     server. Based on Sam Rushing's syslog module:
@@ -829,7 +829,7 @@ class SysLogHandler(molog.Handler):
         socktype of None, in which case socket.SOCK_DGRAM will be used, falling
         back to socket.SOCK_STREAM.
         """
-        molog.Handler.__init__(self)
+        logging.Handler.__init__(self)
 
         self.address = address
         self.facility = facility
@@ -927,7 +927,7 @@ class SysLogHandler(molog.Handler):
             if sock:
                 self.socket = None
                 sock.close()
-            molog.Handler.close(self)
+            logging.Handler.close(self)
 
     def mapPriority(self, levelName):
         """
@@ -983,7 +983,7 @@ class SysLogHandler(molog.Handler):
             self.handleError(record)
 
 
-class SMTPHandler(molog.Handler):
+class SMTPHandler(logging.Handler):
     """
     A handler class which sends an SMTP email for each logging event.
     """
@@ -1005,7 +1005,7 @@ class SMTPHandler(molog.Handler):
         A timeout in seconds can be specified for the SMTP connection (the
         default is one second).
         """
-        molog.Handler.__init__(self)
+        logging.Handler.__init__(self)
         if isinstance(mailhost, (list, tuple)):
             self.mailhost, self.mailport = mailhost
         else:
@@ -1064,7 +1064,7 @@ class SMTPHandler(molog.Handler):
             self.handleError(record)
 
 
-class NTEventLogHandler(molog.Handler):
+class NTEventLogHandler(logging.Handler):
     """
     A handler class which sends events to the NT Event Log. Adds a
     registry entry for the specified application name. If no dllname is
@@ -1075,7 +1075,7 @@ class NTEventLogHandler(molog.Handler):
     which contains the message definitions you want to use in the event log.
     """
     def __init__(self, appname, dllname=None, logtype="Application"):
-        molog.Handler.__init__(self)
+        logging.Handler.__init__(self)
         try:
             import win32evtlog
             import win32evtlogutil
@@ -1099,11 +1099,11 @@ class NTEventLogHandler(molog.Handler):
                     raise
             self.deftype = win32evtlog.EVENTLOG_ERROR_TYPE
             self.typemap = {
-                molog.DEBUG: win32evtlog.EVENTLOG_INFORMATION_TYPE,
-                molog.INFO: win32evtlog.EVENTLOG_INFORMATION_TYPE,
-                molog.WARNING: win32evtlog.EVENTLOG_WARNING_TYPE,
-                molog.ERROR: win32evtlog.EVENTLOG_ERROR_TYPE,
-                molog.CRITICAL: win32evtlog.EVENTLOG_ERROR_TYPE,
+                logging.DEBUG: win32evtlog.EVENTLOG_INFORMATION_TYPE,
+                logging.INFO: win32evtlog.EVENTLOG_INFORMATION_TYPE,
+                logging.WARNING: win32evtlog.EVENTLOG_WARNING_TYPE,
+                logging.ERROR: win32evtlog.EVENTLOG_ERROR_TYPE,
+                logging.CRITICAL: win32evtlog.EVENTLOG_ERROR_TYPE,
          }
         except ImportError:
             self._welu = None
@@ -1168,10 +1168,10 @@ class NTEventLogHandler(molog.Handler):
         DLL name.
         """
         # self._welu.RemoveSourceFromRegistry(self.appname, self.logtype)
-        molog.Handler.close(self)
+        logging.Handler.close(self)
 
 
-class HTTPHandler(molog.Handler):
+class HTTPHandler(logging.Handler):
     """
     A class which sends records to a web server, using either GET or
     POST semantics.
@@ -1182,7 +1182,7 @@ class HTTPHandler(molog.Handler):
         Initialize the instance with the host, the request URL, and the method
         ("GET" or "POST")
         """
-        molog.Handler.__init__(self)
+        logging.Handler.__init__(self)
         method = method.upper()
         if method not in ["GET", "POST"]:
             raise ValueError("method must be GET or POST")
@@ -1259,7 +1259,7 @@ class HTTPHandler(molog.Handler):
             self.handleError(record)
 
 
-class BufferingHandler(molog.Handler):
+class BufferingHandler(logging.Handler):
     """
   A handler class which buffers logging records in memory. Whenever each
   record is added to the buffer, a check is made to see if the buffer should
@@ -1269,7 +1269,7 @@ class BufferingHandler(molog.Handler):
         """
         Initialize the handler with the buffer size.
         """
-        molog.Handler.__init__(self)
+        logging.Handler.__init__(self)
         self.capacity = capacity
         self.buffer = []
 
@@ -1311,7 +1311,7 @@ class BufferingHandler(molog.Handler):
         try:
             self.flush()
         finally:
-            molog.Handler.close(self)
+            logging.Handler.close(self)
 
 
 class MemoryHandler(BufferingHandler):
@@ -1320,7 +1320,7 @@ class MemoryHandler(BufferingHandler):
     flushing them to a target handler. Flushing occurs whenever the buffer
     is full, or when an event of a certain severity or greater is seen.
     """
-    def __init__(self, capacity, flushLevel=molog.ERROR, target=None,
+    def __init__(self, capacity, flushLevel=logging.ERROR, target=None,
                  flushOnClose=True):
         """
         Initialize the handler with the buffer size, the level at which
@@ -1382,7 +1382,7 @@ class MemoryHandler(BufferingHandler):
                 BufferingHandler.close(self)
 
 
-class QueueHandler(molog.Handler):
+class QueueHandler(logging.Handler):
     """
     This handler sends events to a queue. Typically, it would be used together
     with a multiprocessing Queue to centralise logging to file in one process
@@ -1397,7 +1397,7 @@ class QueueHandler(molog.Handler):
         """
         Initialise an instance, using the passed queue.
         """
-        molog.Handler.__init__(self)
+        logging.Handler.__init__(self)
         self.queue = queue
         self.listener = None  # will be set to listener if configured via dictConfig()
 
