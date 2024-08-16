@@ -113,25 +113,3 @@ class LogRecord:
 
     if TYPE_CHECKING:
         def __setattr__(self, name: str, value: Any, /) -> None: ...
-
-
-class LogRecordCompatibleLayer(LogRecord, logging.LogRecord):
-    msg: str | Any
-
-    def __init__(
-        self,
-        name: str,
-        level: int,
-        pathname: str,
-        lineno: int,
-        msg: str | Any,
-        args: _ArgsType | None,
-        exc_info: _SysExcInfoType | None,
-        func: str | None = None,
-        sinfo: str | None = None,
-    ) -> None:
-        if args and len(args) == 1:
-            arg, = args
-            if isinstance(arg, collections.abc.Mapping) and arg:
-                args = arg
-        super().__init__(name, level, pathname, lineno, msg, args, exc_info, func, sinfo)
