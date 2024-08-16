@@ -1,27 +1,25 @@
 import os
 import sys
 import threading
-import time
 import weakref
 
-_startTime = time.time_ns()
-"""_startTime is used as the base when calculating the relative time of events"""
 
-raiseExceptions = True
+class _Flag:
+    def __init__(self, initial_value: bool) -> None:
+        self.value = initial_value
+
+    def set(self, value: bool) -> None:
+        self.value = value
+
+    def __bool__(self) -> bool:
+        return self.value
+
+    def __repr__(self) -> str:
+        return str(self.value)
+
+
+raiseExceptions = _Flag(True)
 """raiseExceptions is used to see if exceptions during handling should be propagated"""
-
-logThreads = True
-"""If you don't want threading information in the log, set this to False"""
-
-logMultiprocessing = True
-"""If you don't want multiprocessing information in the log, set this to False"""
-
-logProcesses = True
-"""If you don't want process information in the log, set this to False"""
-
-logAsyncioTasks = True
-"""If you don't want asyncio task information in the log, set this to False"""
-
 
 if hasattr(sys, "_getframe"):
     def currentframe():  # type: ignore

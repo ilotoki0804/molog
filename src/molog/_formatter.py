@@ -120,14 +120,14 @@ class StringTemplateStyle(PercentStyle):
         return self._tpl.substitute(**values)
 
 
-_DefaultStyles = Literal["percent", "format", "template", "%", "{", "$"]
+_DefaultStyles = Literal["percent", "bracket", "dollar", "%", "{", "$"]
 _STYLES: dict[_DefaultStyles, tuple[type[PercentStyle], str]] = {
     '%': (PercentStyle, "%(levelname)s:%(name)s:%(message)s"),
     '{': (StrFormatStyle, '{levelname}:{name}:{message}'),
     '$': (StringTemplateStyle, '${levelname}:${name}:${message}'),
     'percent': (PercentStyle, "%(levelname)s:%(name)s:%(message)s"),
-    'format': (StrFormatStyle, '{levelname}:{name}:{message}'),
-    'template': (StringTemplateStyle, '${levelname}:${name}:${message}'),
+    'bracket': (StrFormatStyle, '{levelname}:{name}:{message}'),
+    'dollar': (StringTemplateStyle, '${levelname}:${name}:${message}'),
 }
 
 

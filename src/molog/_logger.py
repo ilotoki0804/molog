@@ -35,6 +35,7 @@ class Logger(Filterer):
     """
     root: RootLogger
     manager: Manager
+    recordType: type[_record.LogRecord] = _record.LogRecord
 
     def __init__(self, name, level=_level.NOTSET):
         """
@@ -143,7 +144,7 @@ class Logger(Filterer):
         logger.log(level, "We have a %s", "mysterious problem", exc_info=True)
         """
         if not isinstance(level, int):
-            if _base.raiseExceptions:
+            if raiseExceptions:
                 raise TypeError("level must be an integer")
             else:
                 return
@@ -186,8 +187,7 @@ class Logger(Filterer):
         A factory method which can be overridden in subclasses to create
         specialized LogRecords.
         """
-        rv = _record._logRecordFactory(name, level, fn, lno, msg, args, exc_info, func,
-                             sinfo)
+        rv = self.recordType(name, level, fn, lno, msg, args, exc_info, func, sinfo)
         if extra is not None:
             for key in extra:
                 if (key in ["message", "asctime"]) or (key in rv.__dict__):
