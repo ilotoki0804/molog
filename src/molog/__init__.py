@@ -8,3 +8,9 @@ from ._level import *
 from ._logger import *
 from ._manager import *
 from ._record import *
+
+CAMEL = True
+"""
+CAMEL means molog currently use camel case for naming convention.
+This thing will become False eventually.
+"""
