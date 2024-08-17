@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import collections.abc
 import contextlib
 import logging
@@ -6,7 +8,7 @@ import sys
 import threading
 import time
 from types import TracebackType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, MutableMapping
 
 from ._level import getLevelName
 
@@ -40,16 +42,17 @@ class LogRecord:
     thread: int | None
     threadName: str | None
     taskName: str | None
+    __compatible_cache: ClassVar[MutableMapping[int, type[LogRecord]]] = {}
 
-    _startTime = time.time_ns()
+    _startTime: ClassVar[int] = time.time_ns()
     """_startTime is used as the base when calculating the relative time of events"""
-    logThreads = True
+    logThreads: ClassVar[bool] = True
     """If you don't want threading information in the log, set this to False"""
-    logMultiprocessing = True
+    logMultiprocessing: ClassVar[bool] = True
     """If you don't want multiprocessing information in the log, set this to False"""
-    logProcesses = True
+    logProcesses: ClassVar[bool] = True
     """If you don't want process information in the log, set this to False"""
-    logAsyncioTasks = True
+    logAsyncioTasks: ClassVar[bool] = True
     """If you don't want asyncio task information in the log, set this to False"""
 
     def __init__(
@@ -112,4 +115,79 @@ class LogRecord:
         return f'<LogRecord: {self.name}, {self.levelno}, {self.pathname}, {self.lineno}, "{self.msg}">'
 
     if TYPE_CHECKING:
-        def __setattr__(self, name: str, value: Any, /) -> None: ...
+        def __setattr__(self, name: str, value, /) -> None: ...
+
+    @classmethod
+    @contextlib.contextmanager
+    def context(
+        cls,
+        *,
+        raiseExceptions: bool | None = None,
+        restore: bool = True,
+    ):
+        _startTime = logging._startTime  # type: ignore
+        logThreads = logging.logThreads
+        logMultiprocessing = logging.logMultiprocessing
+        logProcesses = logging.logProcesses
+        logAsyncioTasks = logging.logAsyncioTasks  # type: ignore
+        if raiseExceptions is not None:
+            raiseExceptionsOriginal = logging.raiseExceptions
+
+        try:
+            logging._startTime = cls._startTime  # type: ignore
+            logging.logThreads = cls.logThreads
+            logging.logMultiprocessing = cls.logMultiprocessing
+            logging.logProcesses = cls.logProcesses
+            logging.logAsyncioTasks = cls.logAsyncioTasks  # type: ignore
+            if raiseExceptions is not None:
+                logging.raiseExceptions = raiseExceptions
+
+            yield
+        finally:
+            if restore:
+                logging._startTime = _startTime  # type: ignore
+                logging.logThreads = logThreads
+                logging.logMultiprocessing = logMultiprocessing
+                logging.logProcesses = logProcesses
+                logging.logAsyncioTasks = logAsyncioTasks  # type: ignore
+                if raiseExceptions is not None:
+                    logging.raiseExceptions = raiseExceptionsOriginal
+
+    @classmethod
+    def buildCompatible(cls, logRecordType: type[LogRecord] | type[logging.LogRecord], /) -> type[LogRecord]:
+        if issubclass(logRecordType, LogRecord):
+            return logRecordType
+        elif not issubclass(logRecordType, logging.LogRecord):
+            if isinstance(logRecordType, LogRecord | logging.LogRecord):
+                raise TypeError("Give LogRecord TYPE, not instance of it.")
+            raise TypeError(f"{logRecordType!r} is not valid LogRecord type.")
+
+        if cached := cls.__compatible_cache.get(id(logRecordType), None):
+            return cached
+
+        class LogRecordProxy(LogRecord):
+            __name__ = logRecordType.__name__ + "Proxy"
+            __qualname__ = logRecordType.__qualname__ + "Proxy"
+            __slots__ = ("__record",)
+
+            def __init__(self, *args, **kwargs) -> None:
+                with cls.context():
+                    self.__record = logRecordType(*args, **kwargs)
+
+            def __repr__(self) -> str:
+                return self.__record.__repr__()
+
+            def __setattr__(self, name: str, value, /) -> None:
+                if name == "_LogRecordProxy__record":
+                    object.__setattr__(self, name, value)
+                else:
+                    self.__record.__setattr__(name, value)
+
+            def __getattr__(self, name: str, /):
+                if name == "_LogRecordProxy__record":
+                    return getattr(self, name)
+                else:
+                    return getattr(self.__record, name)
+
+        cls.__compatible_cache[id(logRecordType)] = LogRecordProxy
+        return LogRecordProxy
